@@ -4,6 +4,7 @@ import os
 import logging
 from datetime import datetime
 from pathlib import Path
+import argparse
 
 def remove_directory_tree(start_directory: Path):
     """Recursively and permanently removes the specified directory, all of its
@@ -17,6 +18,45 @@ def remove_directory_tree(start_directory: Path):
 
 
 #source activate /gpfs/gibbs/pi/n3/software/env/pycap_env
+
+
+def dir_path(path):
+    if os.path.isdir(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"readable_dir:{path} is not a valid path")
+
+def file_path(path):
+    if os.path.exists(path):
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"file {path} does not exist!")
+
+def local_path(path):
+    if path[0] != '/':
+        return path
+    else:
+        raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_dir!")
+
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("--sessionsfolder", type=dir_path, required=True, help="Path to directory containing session data.")
+parser.add_argument("--outputfolder", type=str, required=True , help="Output directory for analysis results.")
+parser.add_argument("--ptemplate", type=file_path, required=False , help="Path to parcellation template if using parcellated data.")
+parser.add_argument("--sessionslist", type=file_path, required=True, help="Path to text file containing line-seperated list of sessions.")
+parser.add_argument("--inputbold", type=str, required=True, help="Local path inside each session's folder to the input BOLD data. If there are multiple BOLDs per session, " \
+                    "then this will be the path of the saved concatenated BOLD file. Multiple BOLDs must be specified with the '--inputbolds' flag. ")
+parser.add_argument("--inputbolds", type=str, required=False, help="Comma seperated list of BOLD files to be concatenated if data has multiple BOLDs.")
+parser.add_argument("--inputmotion", type=str, required=False, help="Local path inside each session's folder to the input motion data if using scrubbing. If there are multiple BOLDs per session, " \
+                    "then this will be the path of the saved concatenated motion file. Multiple motion files must be specified with the '--inputmotions' flag. ")
+parser.add_argument("--inputmotions", type=str, required=False, help="Comma seperated list of BOLD files to be concatenated if data has multiple BOLDs.")
+parser.add_argument("--ndummy", type=int, default=0, help="Number of initial dummy frames to remove")
+parser.add_argument("--step", type=str, required=True, help="Comma seperated list of PyCap steps to run")
+parser.add_argument("--overwrite", type=str, default="no", help="Whether to overwrite existing data")
+parser.add_argument("--scheduler", type=str, default="none", help="What scheduler to use (SLURM, PBS, or none). Requires relevant scheduler to be installed.")
+parser.add_argument("--kvals", default="2-15", help="Either a range (eg. 2-5) or comma-seperated list (2,3,4,5) of k-values to use") #NEED TO ADD PARSING FOR THIS
+args = parser.parse_args()
 
 #input parameters
 sessionsfolder="/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
