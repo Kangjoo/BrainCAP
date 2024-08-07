@@ -220,4 +220,53 @@ def load_hpc_groupdata_wb_daylabel(filein, param):
     logging.info(msg)    
     return data_all, sublabel_all, daylabel_all
 
+def concatenate_data(directory, files):
 
+    image_header = nib.load(os.path.join(directory, files[0])).header
+    im_axis = image_header.get_axis(0)
+
+    images_data = np.vstack([nib.load(os.path.join(directory, file)).get_fdata() for file in files])
+
+    ax_0 = nib.cifti2.SeriesAxis(start = im_axis.start, step = im_axis.step, size = images_data.shape[0]) 
+    ax_1 = image_header.get_axis(1)
+    new_h = nib.cifti2.Cifti2Header.from_axes((ax_0, ax_1))
+    conc_image = nib.Cifti2Image(images_data, new_h)
+    conc_image.update_headers()
+    return conc_image
+
+def concatenate_motion(motionpaths, ndummy):
+    motion_conc = []
+    first=True
+    for motionpath in motionpaths:
+        with open(motionpath, 'r') as f:
+            motion = f.read().splitlines()
+
+        if first:
+            motion_conc.append(motion[0])
+            first=False
+
+        del motion[0]
+        #Remove commented and dummy frames
+        motion_conc += [line for line in motion if line[0] != "#"][ndummy:]
+
+    return motion_conc
+
+def parse_slist(sessionsfile):
+    sessions=[]
+    with open(sessionsfile, 'r') as f:
+        sessionslist = f.read().splitlines().strip()
+    for line in sessionslist:
+        elements = line.split(':')
+        if len(elements) == 1:
+            sessions.append(elements[0])
+        elif len(elements) == 2:
+            if elements[0] in ['subject id', 'session id']:
+                sessions.append(elements[1])
+            else:
+                print(f"Incompatible key {elements[0]} in sessions list!")
+                raise
+        else:
+            print(f"Incompatible line {elements} in sessions list!")
+            raise
+
+    return sessions
