@@ -112,8 +112,6 @@ def load_hpc_groupdata_motion(filein, param):
     homedir = filein.homedir
     sublist = filein.sublist
     motion_type = param.motion_type
-    n_dummy = param.n_dummy
-    run_order = param.run_order
 
     motion_data_all = np.array([])
     subiter = 1
@@ -122,31 +120,32 @@ def load_hpc_groupdata_motion(filein, param):
         # ------------------------------------------
         #       Individual motion data analysis
         # ------------------------------------------
-        msg = "     (Subject " + str(subiter) + " runs " + str(run_order) + \
+        msg = "     (Subject " + str(subiter) + \
             ") load frame-wise motion estimates(" + motion_type + ").."
         logging.info(msg)
         motion_data_ind = np.array([])
 
-        runiter = 1
-        for n_run in run_order:
+        #runiter = 1
+        #for n_run in run_order:
 
             # - Load motion estimates in each run from QuNex output
-            motion_data_filen = homedir + str(subID) + \
-                "/images/functional/movement/bold" + str(n_run) + ".bstats"
-            motion_dlist = np.genfromtxt(motion_data_filen, names=True)
-            idx = np.where(np.char.find(motion_dlist.dtype.names, motion_type) == 0)
-            motion_data_run = np.genfromtxt(motion_data_filen, skip_header=1, usecols=idx[0])
+        # motion_data_filen = homedir + str(subID) + \
+        #     "/images/functional/movement/bold" + str(n_run) + ".bstats"
+        motion_data_filen = os.path.join(homedir, str(subID), filein.motion_file)
+        motion_dlist = np.genfromtxt(motion_data_filen, names=True)
+        idx = np.where(np.char.find(motion_dlist.dtype.names, motion_type) == 0)
+        motion_data_ind = np.genfromtxt(motion_data_filen, skip_header=1, usecols=idx[0])
 
-            # - Remove dummy time-frames
-            motion_data_run = np.delete(motion_data_run, range(n_dummy), 0)
+        # - Remove dummy time-frames
+        #motion_data_run = np.delete(motion_data_run, range(n_dummy), 0)
 
-            # - Concatenate individual runs ( ((n_runs) x n_timeframes) x 1 )
-            if runiter == 1:
-                motion_data_ind = motion_data_run
-            elif runiter > 1:
-                motion_data_ind = np.concatenate((motion_data_ind, motion_data_run), axis=0)
+        # - Concatenate individual runs ( ((n_runs) x n_timeframes) x 1 )
+        # if runiter == 1:
+        #     motion_data_ind = motion_data_run
+        # elif runiter > 1:
+        #     motion_data_ind = np.concatenate((motion_data_ind, motion_data_run), axis=0)
 
-            runiter = runiter+1
+        #runiter = runiter+1
 
         # ------------------------------------------
         #       Stack individual motion data

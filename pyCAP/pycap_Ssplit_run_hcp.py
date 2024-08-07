@@ -142,7 +142,7 @@ elif param.unit == "p":
     param.sdim = 718
 param.tdim = 4800
 param.subsplittype = args.subsplittype
-param.motion_file = args.motionfile
+
 
 # - parameters for seed signal selection
 param.seedtype = args.seedtype
@@ -190,7 +190,7 @@ filein.sublist = parse_slist(args.sublistfilen)
 filein.pscalar_filen = args.pscalarfile.name
 
 filein.fname = args.inputdata
-
+filein.motion_file = args.motionfile
 #
 
 # -------------------------------------------
