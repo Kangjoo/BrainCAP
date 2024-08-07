@@ -54,9 +54,43 @@ parser.add_argument("--inputmotions", type=str, required=False, help="Comma sepe
 parser.add_argument("--ndummy", type=int, default=0, help="Number of initial dummy frames to remove")
 parser.add_argument("--step", type=str, required=True, help="Comma seperated list of PyCap steps to run")
 parser.add_argument("--overwrite", type=str, default="no", help="Whether to overwrite existing data")
-parser.add_argument("--scheduler", type=str, default="none", help="What scheduler to use (SLURM, PBS, or none). Requires relevant scheduler to be installed.")
-parser.add_argument("--kvals", default="2-15", help="Either a range (eg. 2-5) or comma-seperated list (2,3,4,5) of k-values to use") #NEED TO ADD PARSING FOR THIS
+parser.add_argument("--scheduler", type=str, default="none", help="Comma seperated Scheduler parameters, accepted schedulers are SLURM, PBS, and none.")
+
+#pycap params
+parser.add_argument("--kvals", default="2-15", type=str, help="Either a range (eg. 2-5) or comma-seperated list (2,3,4,5) of k-values to use")
+parser.add_argument("--nsplits", default=1, type=int, help="Number of split-half validations to run.")
+parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
+parser.add_argument( "--savecapimg", type=str, help="Save CAP images or not (y/n)")
+parser.add_argument("--kmethod", type=str, help="(sse/silhouette)")
+parser.add_argument( "--eventcombine", type=str, help="(average/interserction/union)")
+parser.add_argument( "--eventtype", type=str, help="activation/deactivation/both")
+parser.add_argument("--gsr", type=str, help="(y/n)")
+parser.add_argument("--ncluster", type=int, help="Number of clusters for k-means clustering")
+parser.add_argument( "--maxiter", type=int, help="Iterations for k-menas clustering")
+parser.add_argument("--motiontype", type=str, help="(dvarsm,dvarsme,fd)")
+parser.add_argument("--seedtype", type=str, help="(seedfree/seedbased)")
+parser.add_argument("--seedname", type=str, help="Seed name")
+parser.add_argument("--seedthreshtype", type=str, help="(T/P)")
+parser.add_argument("--seedthreshold", type=float, help="Signal threshold")
+parser.add_argument( "--subsplittype", type=str, help="random/days")
+parser.add_argument( "--randTthreshold", type=float, help="Random Time Signal threshold")
+parser.add_argument("--unit", type=str, help="(p/d)")  # parcel or dense
+parser.add_argument("--motionthreshold", type=float, help="Motion threshold")
+parser.add_argument("--motiondisplay", type=str,
+                    help="Display motio parameter or not (y/n)")
+
+# parser.add_argument("--job-name", type=str, help="Scheduler parameter. This will be assigned as the job's name")
+# parser.add_argument("--mem-per-cpu", type=str, default="2G", help="Scheduler parameter. Amount of memory to assign to each CPU, more will be needed if using dense data.")
+#parser.add_argument()
 args = parser.parse_args()
+
+sched_args = args.scheduler.split(',')
+
+disallowed = {'SLURM':['nodes','ntasks','array']}
+
+sched_type = sched_args[0]
+
+#--scheduler=SLURM,time=0-2:00:00,mem-per-cpu=1000,partition=pi_anticevic,mail-type=all,nodes=1,cpus-per-task=1
 
 #input parameters
 sessionsfolder="/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
@@ -111,17 +145,7 @@ group_dir = os.path.join(analysisfolder, 'groupdata/')
 outdir = os.path.join(results_dir, 'Ssplit_')
 datadir = os.path.join(group_dir, 'Ssplit_')
 
-
 step_list = steps.split(',')
-
-# logging.basicConfig(level=logging.INFO,
-#                     format='%(asctime)s - %(message)s',
-#                     filename=f"{analysisfolder}run_pycap.log",
-#                     filemode='w')
-# console = logging.StreamHandler()
-# formatter = logging.Formatter('%(asctime)s - %(message)s')
-# console.setFormatter(formatter)
-# logging.getLogger('').addHandler(console)
 
 #PyCap setup
 if 'pre_pycap' in step_list:
