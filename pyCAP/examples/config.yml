@@ -1,9 +1,12 @@
 steps: 
   - "concatenate_bolds"
+  
 global:
   sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
   analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/devtest/parc_test/"
   sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/sublist/sessions5.list"
+  logs_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/logs"
+
 concatenate_bolds:
   bold_files: 
     - "images/functional/bold2_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
@@ -25,6 +28,7 @@ concatenate_bolds:
     cpus: 1
     partition: pi_anticevic
     mail: samuel.brege@yale.edu
+    time: 2:00:00
 
 pycap_setup:
 
