@@ -97,15 +97,7 @@ args = parser.parse_args()  # Read arguments from command line
 #      Define seed regions of interest
 # -------------------------------------------
 
-Thalamus_AD = [525, 526, 527, 528, 529, 538, 539, 540, 541]
-Thalamus_CO = [290, 291, 312, 313]
-Thalamus_DA = [350, 361]
-Thalamus_DMN = [632, 633, 634, 647, 648, 649]
-Thalamus_FP = [472, 494]
-Thalamus_PM = [671, 686]
-Thalamus_SM = [204, 217]
-Thalamus_VIS1 = [39, 40, 41, 42, 43, 44, 66, 67, 68]
-Thalamus_VIS2 = [138, 151]
+
 # Thalamus_LAN = []
 # Thalamus_VM = []
 # Thalamus_OA = []
