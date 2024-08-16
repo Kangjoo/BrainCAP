@@ -55,7 +55,7 @@ def load_hpc_groupdata_wb(filein, param):
         zdata = load_hpc_norm_subject_wb(dataname)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
-        subid_v = [subID] * zdata.shape[0]
+        subid_v = [idx] * zdata.shape[0]
         subid_v = np.array(subid_v)
         sublabel_all[ptr:ptr+zdata.shape[0], ] = subid_v
         # - Update/delete variables
@@ -82,7 +82,7 @@ def load_hpc_groupdata_wb_usesaved(filein, param):
 
         f = h5py.File(filein.groupdata_wb_filen, 'r')
         data_all = f['data_all']
-        sublabel_all = f['sublabel_all']
+        sublabel_all = np.asarray([filein.sublist[idx] for idx in f['sublabel_all']])
 
     else:
         msg = "File does not exist. Load individual whole-brain fMRI data."
@@ -219,12 +219,12 @@ def load_hpc_groupdata_wb_daylabel(filein, param):
     logging.info(msg)    
     return data_all, sublabel_all, daylabel_all
 
-def concatenate_data(directory, files):
+def concatenate_data(files, ndummy):
 
-    image_header = nib.load(os.path.join(directory, files[0])).header
+    image_header = nib.load(files[0]).header
     im_axis = image_header.get_axis(0)
 
-    images_data = np.vstack([nib.load(os.path.join(directory, file)).get_fdata() for file in files])
+    images_data = np.vstack([nib.load(file).get_fdata()[ndummy:] for file in files])
 
     ax_0 = nib.cifti2.SeriesAxis(start = im_axis.start, step = im_axis.step, size = images_data.shape[0]) 
     ax_1 = image_header.get_axis(1)
@@ -253,14 +253,14 @@ def concatenate_motion(motionpaths, ndummy):
 def parse_slist(sessionsfile):
     sessions=[]
     with open(sessionsfile, 'r') as f:
-        sessionslist = f.read().splitlines().strip()
+        sessionslist = f.read().splitlines()
     for line in sessionslist:
-        elements = line.split(':')
+        elements = line.strip().split(':')
         if len(elements) == 1:
-            sessions.append(elements[0])
+            sessions.append(elements[0].strip())
         elif len(elements) == 2:
             if elements[0] in ['subject id', 'session id']:
-                sessions.append(elements[1])
+                sessions.append(elements[1].strip())
             else:
                 print(f"Incompatible key {elements[0]} in sessions list!")
                 raise
