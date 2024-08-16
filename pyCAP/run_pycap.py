@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+#source activate /gpfs/gibbs/pi/n3/software/env/pycap_env
 
 import subprocess
 import os
@@ -24,10 +25,22 @@ def file_path(path):
 timestamp = datetime.now().strftime("%Y-%m-%d_%H.%M.%S.%f")
 pp = pprint.PrettyPrinter(indent=1)
 
-req_args = {"global":{}}
+#Dict containing required and optional parameters for each step, should exactly match the actual flags
+arg_dict = {'required':
+                {'concatenate_bolds':
+                 ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path']}, 
+            'optional':
+                {'concatenate_bolds':
+                 ['overwrite', 'ndummy', 'motion_files', 'motion_out']}
+            }
+
+#Dict containing script paths for each step
+step_dict = {'concatenate_bolds':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_concatenate.py'}
+
+
 schedulers = ['NONE','SLURM','PBS']
 
-defaults = {"global":{'scheduler':{'type':"NONE"}},
+defaults = {"global":{'scheduler':{'type':"NONE"}, 'analysis_folder':'.'},
             "concatenate_bolds":{'overwrite':'no'}}
 
 
@@ -83,21 +96,54 @@ for step in args['steps']:
 
 #Contain list of commands to run, either as jobs or directly
 commands = []
+#Contains list of all output logs, paired with commands
+logs = []
 
+#Setup commands and params for each step
 for step in args['steps']:
 
     if step not in args.keys():
         print(f"--steps parameter: '{step}' missing config parameters! Exiting...")
         exit()
-    
+
     step_args = parsed_args[step]
+    #Setup log path
+    if 'logs_folder' not in step_args.keys():
+        step_args['logs_folder'] = os.path.join(step_args['analysis_folder'], 'logs')
+    if not os.path.exists(step_args['logs_folder']):
+        os.makedirs(step_args['logs_folder'])
+    step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{timestamp}.log')
+    logs.append(step_args['log_path'])
     
     pp.pprint(step_args)
 
+    #Build step command
+    if step in step_dict.keys():
+        command = ""
+        command += f"python {step_dict[step]} "
+        
+        #Required Params
+        for arg in arg_dict['required'][step]:
+            if arg not in step_args.keys():
+                print(f"ERROR! Missing required argument '{arg}' for {step}. Exiting...")
+                exit()
+            if type(step_args[arg]) == list:
+                step_args[arg] = ','.join(step_args[arg])
+            command += f"--{arg} {step_args[arg]} "
 
-    if step == "concatenate_bolds":
-        pass
+        for arg in arg_dict['optional'][step]:
+            if arg in step_args.keys():
+                if type(step_args[arg]) == list:
+                    step_args[arg] = ','.join(step_args[arg])
+                command += f"--{arg} {step_args[arg]} "
 
     else:
         print(f"--steps parameter: '{step}' invalid! Exiting...")
         exit()
+
+    commands.append(command)
+
+#Run commands
+for command, log in zip(commands, logs):
+    print(command)
+    print(log)
