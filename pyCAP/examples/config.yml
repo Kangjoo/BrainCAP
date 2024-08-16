@@ -1,0 +1,32 @@
+steps: 
+  - "concatenate_bolds"
+global:
+  sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
+  analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/devtest/parc_test/"
+  sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/sublist/sessions5.list"
+concatenate_bolds:
+  bold_files: 
+    - "images/functional/bold2_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+    - "images/functional/bold1_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+    - "images/functional/bold4_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+    - "images/functional/bold3_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  bold_out: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  motion_files:
+    - images/functional/movement/bold2.bstats
+    - images/functional/movement/bold1.bstats
+    - images/functional/movement/bold4.bstats
+    - images/functional/movement/bold3.bstats
+  motion_out: images/functional/bold2143_conc.bstats
+  overwrite: "no"
+  ndummy: 100
+  scheduler:
+    type: NONE
+    mem: 10G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+
+pycap_setup:
+
+
+
