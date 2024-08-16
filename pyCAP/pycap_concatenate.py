@@ -22,24 +22,24 @@ def local_path(path):
     if path[0] != '/':
         return path
     else:
-        raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_dir!")
+        raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-sl", "--sessions_list", required=True, type=file_path, help="Path to list of sessions")
-parser.add_argument("-sd", "--sessions_dir", required=True, type=dir_path, help="Data directory containing individual sessions")
-parser.add_argument("-b", "--bolds", type=local_path, required=True, help="Comma separated list of bolds to concatenate, must be inside each session directory")
-parser.add_argument("-mf", "--motionfiles", type=local_path, required=False, help="Comma separated list of motion files to concatenate if doing scrubbing, must be inside each session directory")
-parser.add_argument("-o", "--output", type=local_path, required=True, help="Where to place output concatenated bold files, must be inside each session directory")
-parser.add_argument("-om", "--outputmotion", type=local_path, required=False, help="Where to place output concatenated motion files, must be inside each session directory. Required for scrubbing")
+parser.add_argument("-sd", "--sessions_folder", required=True, type=dir_path, help="Data directory containing individual sessions")
+parser.add_argument("-b", "--bold_files", type=local_path, required=True, help="Comma separated list of bolds to concatenate, must be inside each session directory")
+parser.add_argument("-mf", "--motion_files", type=local_path, required=False, help="Comma separated list of motion files to concatenate if doing scrubbing, must be inside each session directory")
+parser.add_argument("-o", "--bold_out", type=local_path, required=True, help="Where to place output concatenated bold files, must be inside each session directory")
+parser.add_argument("-om", "--motion_out", type=local_path, required=False, help="Where to place output concatenated motion files, must be inside each session directory. Required for scrubbing")
 parser.add_argument("-ow", "--overwrite", type=str, required=False, default="no", help="Whether to overwrite existing files")
 parser.add_argument("-d", "--ndummy", type=int, default=0, help="Number of dummy frames to remove")
-parser.add_argument("-l", "--logpath", default='./prep_pycap.log', help='Path to output log', required=False)
+parser.add_argument("-l", "--log_path", default='./concatenate_bolds.log', help='Path to output log', required=False)
 
 args = parser.parse_args()
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(message)s',
-                    filename=args.logpath,
+                    filename=args.log_path,
                     filemode='w')
 console = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(message)s')
@@ -48,25 +48,25 @@ logging.getLogger('').addHandler(console)
 
 slist = parse_slist(args.sessions_list)
 
-bold_list = args.bolds.strip(' ;').split(',')
-if args.motionfiles is not None:
-    logging.info("--motionfiles supplied, will run motion concatenation")
+bold_list = args.bold_files.split(',')
+if args.motion_files is not None:
+    logging.info("--motion_files supplied, will run motion concatenation")
     conc_motion = True
-    motion_list = args.motionfiles.strip(' ;').split(',')
+    motion_list = args.motion_files.split(',')
 else:
-    logging.info("--motionfiles not supplied, skipping motion concatenation")
+    logging.info("--motion_files not supplied, skipping motion concatenation")
     conc_motion = False
 
 logging.info(f"Beginning bold concatenation for sessions in {args.sessions_list}...")
 
 for session in slist:
     logging.info(f"    Processing {session}")
-    bolds = [os.path.join(args.sessions_dir, session, bold) for bold in bold_list]
+    bolds = [os.path.join(args.sessions_folder, session, bold) for bold in bold_list]
     bolds_string = '\t\t\n'.join(bolds)
     logging.info(f"        Searching for files:")
     logging.info(bolds_string)
     logging.info(f"        Running bold concatenation...")
-    conc_path = os.path.join(args.sessions_dir, session, args.output)
+    conc_path = os.path.join(args.sessions_folder, session, args.bold_out)
     if os.path.exists(conc_path):
         logging.info(f"           Warning: Existing concatenated bold file found")
         if args.overwrite.lower() == 'yes':
@@ -81,8 +81,8 @@ for session in slist:
 
     if conc_motion:
         logging.info(f"        Running motion concatenation...")
-        motions = [os.path.join(args.sessions_dir, session, motion) for motion in motion_list]
-        conc_path = os.path.join(args.sessions_dir, session, args.outputmotion)
+        motions = [os.path.join(args.sessions_folder, session, motion) for motion in motion_list]
+        conc_path = os.path.join(args.sessions_folder, session, args.motion_out)
         if os.path.exists(conc_path):
             logging.info(f"           Warning: Existing concatenated motion file found")
             if args.overwrite.lower() == 'yes':
