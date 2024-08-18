@@ -1,6 +1,6 @@
 steps: 
   - "concatenate_bolds"
-  
+
 global:
   sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
   analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/devtest/parc_test/"
@@ -24,7 +24,7 @@ concatenate_bolds:
   ndummy: 100
   scheduler:
     type: NONE
-    mem: 10G
+    cpu_mem: 10G
     cpus: 1
     partition: pi_anticevic
     mail: samuel.brege@yale.edu
