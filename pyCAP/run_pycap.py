@@ -22,7 +22,7 @@ def file_path(path):
     
 #Main function
 
-timestamp = datetime.now().strftime("%Y-%m-%d_%H.%M.%S.%f")
+timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
 pp = pprint.PrettyPrinter(indent=1)
 
 #Dict containing required and optional parameters for each step, should exactly match the actual flags
@@ -120,8 +120,30 @@ for step in args['steps']:
     #Build step command
     if step in step_dict.keys():
         command = ""
-        command += f"python {step_dict[step]} "
+
+        if sched_type.upper() == "NONE":
+            pass
+            #command += f"python {step_dict[step]} "
+
+        elif sched_type.upper() == "SLURM":
+            command = "#!/bin/bash\n"
+            command += f"#SBATCH -J {step}\n"
+            command += f"#SBATCH --mem-per-cpu={step_args['scheduler']['cpu_mem']}\n"
+            command += f"#SBATCH --cpus-per-task={step_args['scheduler']['cpus']}\n"
+            command += f"#SBATCH --partition={step_args['scheduler']['partition']}\n"
+            command += f"#SBATCH --time={step_args['scheduler']['time']}\n"
+            command += f"#SBATCH --output={step}_{timestamp}\n"
+            command += f"#SBATCH --nodes=1\n"
+            command += f"#SBATCH --ntasks=1\n"
+
+            #SLURM output
+            logs.append(f"{step}_{timestamp}")
+
+        elif sched_type.upper() == "PBS":
+            pass
         
+        command += f"python {step_dict[step]} "
+
         #Required Params
         for arg in arg_dict['required'][step]:
             if arg not in step_args.keys():
@@ -145,5 +167,19 @@ for step in args['steps']:
 
 #Run commands
 for command, log in zip(commands, logs):
-    print(command)
-    print(log)
+    if sched_type.upper() == "NONE":
+        print(command)
+        print(log)
+    elif sched_type.upper() == "SLURM":
+        serr = subprocess.STDOUT
+        sout = subprocess.PIPE
+        run = subprocess.Popen(
+                "sbatch", shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True
+            )
+        run.stdin.write((command).encode("utf-8"))
+        out = run.communicate()[0].decode("utf-8")
+        run.stdin.close()
+
+        job_id = out.split("Submitted batch job ")[1]
+        print("Follow command progress in:")
+        print(f"{log}")
