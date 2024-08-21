@@ -1,11 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Created By  : Kangjoo Lee (kangjoo.lee@yale.edu)
-# Created Date: 12/17/2021
-# Last Updated: 04/22/2022
-# version ='0.0'
-# ---------------------------------------------------------------------------
+# Last Updated: 08/06/2024
+# -------------------------------------------------------------------------
 
 
 # Imports
@@ -27,6 +25,9 @@ def subsplit(filein, param):
 
     filein.sublistfull = filein.sublist
     splitdata_outfilen = filein.outdir + "subsplit_datalist.hdf5"
+    msg = splitdata_outfilen
+    logging.info(msg)
+    
     if os.path.exists(splitdata_outfilen):
 
         msg = "File exists. Load existing list of subjects for training/test datasets: " + splitdata_outfilen
@@ -68,9 +69,9 @@ def subsplit(filein, param):
             for index in training_sublist_idx:
                 training_sublist.append(filein.sublist[index])
 
-        elif param.subsplittype == "manual":
-            training_sublist_idx = np.array(range(0, spsize, 1))
-            test_sublist_idx = np.array(range(spsize, spsize*2, 1))
+#         elif param.subsplittype == "manual":
+#             training_sublist_idx = np.array(range(0, spsize, 1))
+#             test_sublist_idx = np.array(range(spsize, spsize*2, 1)) #example method for manual type
 
         msg = "(Split 1) Training data subjects " + \
             str(len(training_sublist)) + " : " + str(training_sublist)
@@ -89,8 +90,6 @@ def subsplit(filein, param):
         logging.info(msg)
 
     return test_sublist, training_sublist
-
-
 
 
 

@@ -1,22 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Created By  : Kangjoo Lee (kangjoo.lee@yale.edu)
-# Created Date: 12/17/2021
-# Last Updated: 05/17/2022
-# version ='0.0'
-# ---------------------------------------------------------------------------
+# Last Updated: 08/06/2024
+# -------------------------------------------------------------------------
+
 
 # =========================================================================
 #                    --   Run pipeline template  --
 #      Analysis of Co-Activation Patterns(CAP) in fMRI data (HCP-YA)
 # =========================================================================
 
-# Prerequisite libraries
-#        NiBabel
-#              https://nipy.org/nibabel/index.html
-#              command: pip install nibabel
-# (base) $ conda install matplotlib numpy pandas seaborn scikit-learn ipython h5py memory-profiler kneed nibabel
+
 
 # Imports
 import math
@@ -92,16 +87,6 @@ parser.add_argument("-step", "--step", type=str, help="Step to run (step1 or ste
 parser.add_argument("-ow", "--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 args = parser.parse_args()  # Read arguments from command line
 
-
-# -------------------------------------------
-#      Define seed regions of interest
-# -------------------------------------------
-
-
-# Thalamus_LAN = []
-# Thalamus_VM = []
-# Thalamus_OA = []
-
 # -------------------------------------------
 #           Setup input parameters
 # -------------------------------------------
@@ -132,7 +117,7 @@ if param.unit == "d":
     param.sdim = 91282
 elif param.unit == "p":
     param.sdim = 718
-param.tdim = 4800
+param.tdim = 4400
 param.subsplittype = args.subsplittype
 
 
@@ -183,7 +168,7 @@ filein.pscalar_filen = args.pscalarfile.name
 
 filein.fname = args.inputdata
 filein.motion_file = args.motionfile
-#
+
 
 # -------------------------------------------
 #            Setup output directory

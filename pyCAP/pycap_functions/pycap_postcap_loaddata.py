@@ -1,22 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Created By  : Kangjoo Lee (kangjoo.lee@yale.edu)
-# Created Date: 04/05/2022
-# Last Updated: 04/22/2022
-# version ='0.0'
-# ---------------------------------------------------------------------------
+# Last Updated: 08/06/2024
+# -------------------------------------------------------------------------
 
 # =========================================================================
 #                   --   Post CAP pipeline template  --
 #      Analysis of Co-Activation Patterns(CAP) in fMRI data (HCP-YA)
 # =========================================================================
 
-# Prerequisite libraries
-#        NiBabel
-#              https://nipy.org/nibabel/index.html
-#              command: pip install nibabel
-# (base) $ conda install matplotlib numpy pandas seaborn scikit-learn ipython h5py memory-profiler kneed nibabel
 
 
 # Imports

@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# ----------------------------------------------------------------------------
+# -------------------------------------------------------------------------
 # Created By  : Kangjoo Lee (kangjoo.lee@yale.edu)
-# Created Date: 01/19/2022
-# Last Updated: 05/17/2022
-# version ='0.0'
-# ---------------------------------------------------------------------------
+# Last Updated: 08/06/2024
+# -------------------------------------------------------------------------
+
+
 # ===============================================================
 #        Spatiotemporal Frame Selection for CAPs analysis
 # ===============================================================
@@ -18,6 +18,7 @@ import logging
 import h5py
 from pycap_functions.pycap_loaddata_hcp import load_hpc_groupdata_motion
 from memory_profiler import profile
+
 
 
 
@@ -48,7 +49,7 @@ def frameselection_wb(inputdata, labeldata, filein, param):
     #   Motion scrubbing
     # ------------------------------------------------------------------------
 
-    flag_scrubbed_all = frameselection_motion(filein, param, sublist)
+    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist)
 
     # ------------------------------------------------------------------------
     #   Combine all frame flags (1: select, 0: remove)
@@ -130,7 +131,7 @@ def frameselection_wb_daylabel(inputdata, daydata, filein, param):
     #   Motion scrubbing
     # ------------------------------------------------------------------------
 
-    flag_scrubbed_all = frameselection_motion(filein, param, sublist)
+    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist)
 
     # ------------------------------------------------------------------------
     #   Combine all frame flags (1: select, 0: remove)
@@ -178,6 +179,31 @@ def frameselection_wb_daylabel(inputdata, daydata, filein, param):
 
 
 
+
+
+
+# @profile
+def motion_qc(filein, param):
+    # inputdata: (concantenated time points x space) matrix of whole brain time-course
+
+    outdir = filein.outdir
+    sublist = filein.sublist
+
+    msg = "============================================"
+    logging.info(msg)
+    msg = "[Motion Quality Control]"
+    logging.info(msg)
+
+    # ------------------------------------------------------------------------
+    #   Motion data and scrubbing flag
+    # ------------------------------------------------------------------------
+
+    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist)
+
+
+    return flag_scrubbed_all, motion_metric
+
+    
 #############################################################################
 #                               Sub-functions                               #
 #############################################################################
@@ -272,6 +298,8 @@ def frameselection_motion(filein, param, sublist):
         round(percent_scrubbed, 2)) + "% of total time-frames) has(ve) passed motion screening."
     logging.info(msg)
 
-    return flag_scrubbed_all
+    return flag_scrubbed_all, motion_metric
+
+
 
 
