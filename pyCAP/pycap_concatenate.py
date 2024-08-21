@@ -5,6 +5,7 @@ import os
 from pycap_functions.pycap_loaddata_hcp import concatenate_data, concatenate_motion, parse_slist
 import nibabel as nib
 import logging
+import time
 
 def dir_path(path):
     if os.path.isdir(path):
@@ -45,6 +46,11 @@ console = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s - %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
+
+logging.info("PYCAP CONCATENATE BEGIN")
+
+#Wait for a moment so run_pycap.py log tracking can keep up
+time.sleep(1)
 
 slist = parse_slist(args.sessions_list)
 
@@ -87,13 +93,16 @@ for session in slist:
             logging.info(f"           Warning: Existing concatenated motion file found")
             if args.overwrite.lower() == 'yes':
                 logging.info(f"           overwrite=yes, overwriting...")
+                with open(conc_path, 'w') as f:
+                    f.write('\n'.join(concatenate_motion(motions, args.ndummy)))
+                logging.info(f"        File {conc_path} created!")
             else:
                 logging.info(f"           overwrite=no, skipping...")
-                continue
-        with open(conc_path, 'w') as f:
-            f.write('\n'.join(concatenate_motion(motions, args.ndummy)))
-        logging.info(f"        File {conc_path} created!")
-        
-
+        else:
+            with open(conc_path, 'w') as f:
+                f.write('\n'.join(concatenate_motion(motions, args.ndummy)))
+            logging.info(f"        File {conc_path} created!")
 
     logging.info(f"        {session} concatenated sucessfully\n")
+
+logging.info(f"--- STEP COMPLETE ---")
