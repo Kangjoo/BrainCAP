@@ -20,6 +20,28 @@ def file_path(path):
     else:
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
     
+import time
+def follow(filepath, threshold=None):
+    """
+    Will print the text of a file as it is being written
+
+    If threshold is supplied, will stop (threshold * 0.1ms) after the file has
+    received no new text. Otherwise, will continue until no longer called.
+    """
+    file = open(filepath, "r")
+    file.seek(0,2)
+    stall_counter = 0
+    while True:
+        line = file.readline()
+        if not line:
+            if threshold is not None and stall_counter > threshold:
+                break
+            stall_counter += 1
+            time.sleep(0.1)
+            continue
+        stall_counter = 0
+        yield line
+    
 #Main function
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
@@ -165,21 +187,58 @@ for step in args['steps']:
 
     commands.append(command)
 
+job_id = None
 #Run commands
 for command, log in zip(commands, logs):
+    serr = subprocess.STDOUT
+    sout = subprocess.PIPE
     if sched_type.upper() == "NONE":
-        print(command)
-        print(log)
-    elif sched_type.upper() == "SLURM":
-        serr = subprocess.STDOUT
-        sout = subprocess.PIPE
         run = subprocess.Popen(
-                "sbatch", shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True
+                command, shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True)
+        
+        #Wait a moment so that the file is generated
+        t = 0
+        while not os.path.exists(log):
+            if t > 1000:
+                print("ERROR! Step failed to launch, halting execution!")
+                print(f"Attempted to run the following command:\n {command}")
+                exit()
+            time.sleep(0.1)
+            t += 1
+        print(f"Running command:\n {command}\n")
+        print(f"Command launched succesfully! Showing output from {log}")
+        #follows step output and prints it
+        runlog = follow(log, 6000)
+        for line in runlog:
+            p_line = line.replace("\n","")
+            print(p_line)
+
+            if "STEP COMPLETE" in p_line:
+                print("Step completed successfully!")
+                break
+
+            if "ERROR" in p_line.upper():
+                print("ERROR! Step failed, halting execution!")
+                break
+
+    elif sched_type.upper() == "SLURM":
+        
+        #Set previous job as a dependancy
+        if job_id != None:
+            run_com = f"sbatch --dependency afterok:{job_id}"
+        else:
+            run_com = "sbatch"
+
+        run = subprocess.Popen(
+                run_com, shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True
             )
         run.stdin.write((command).encode("utf-8"))
         out = run.communicate()[0].decode("utf-8")
         run.stdin.close()
 
         job_id = out.split("Submitted batch job ")[1]
+        print(f"Launched job {job_id}")
         print("Follow command progress in:")
         print(f"{log}")
+
+print("All steps launched!")
