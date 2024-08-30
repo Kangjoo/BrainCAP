@@ -1,7 +1,4 @@
-steps: 
-  - "concatenate_bolds"
-
-global:
+global: #Parameters applicable to all steps, overwritten if specified in the step
   sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
   analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/devtest/parc_test/"
   sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/sublist/sessions5.list"
@@ -20,17 +17,33 @@ concatenate_bolds:
     - images/functional/movement/bold4.bstats
     - images/functional/movement/bold3.bstats
   motion_out: images/functional/bold2143_conc.bstats
-  overwrite: "no"
+  overwrite: "yes"
   ndummy: 100
   scheduler:
     type: NONE
-    cpu_mem: 10G
+    cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
     mail: samuel.brege@yale.edu
-    time: 2:00:00
+    time: "1:00:00"
 
-pycap_setup:
+pycap_prep:
+  scrubbing: y
+  gsr: y
+  bold_path: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  n_splits: 1
+  motion_type: fd
+  motion_path: images/functional/bold2143_conc.bstats
+  display_motion: n
+  overwrite: no
+  scheduler:
+    type: NONE
+    cpu_mem: 16G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+    time: "2-00:00:00"
+
 
 
 
