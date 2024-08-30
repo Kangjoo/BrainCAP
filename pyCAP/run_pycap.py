@@ -118,7 +118,7 @@ for step in args['steps']:
 
 #Contain list of commands to run, either as jobs or directly
 commands = []
-#Contains list of all output logs, paired with commands
+#Contains list of output logs (command logs for no scheduler, job logs for scheduler)
 logs = []
 
 #Setup commands and params for each step
@@ -135,7 +135,12 @@ for step in args['steps']:
     if not os.path.exists(step_args['logs_folder']):
         os.makedirs(step_args['logs_folder'])
     step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{timestamp}.log')
-    logs.append(step_args['log_path'])
+    #Running as job directs output to it's own log, in which case better to use that for monitoring
+    if sched_type != "NONE":
+        sched_log = os.path.join(step_args['logs_folder'], f'{sched_type}_{step}_{timestamp}.log')
+        logs.append(sched_log)
+    else:
+        logs.append(step_args['log_path'])
     
     pp.pprint(step_args)
 
@@ -143,9 +148,9 @@ for step in args['steps']:
     if step in step_dict.keys():
         command = ""
 
+        #Currently unused
         if sched_type.upper() == "NONE":
             pass
-            #command += f"python {step_dict[step]} "
 
         elif sched_type.upper() == "SLURM":
             command = "#!/bin/bash\n"
@@ -154,7 +159,7 @@ for step in args['steps']:
             command += f"#SBATCH --cpus-per-task={step_args['scheduler']['cpus']}\n"
             command += f"#SBATCH --partition={step_args['scheduler']['partition']}\n"
             command += f"#SBATCH --time={step_args['scheduler']['time']}\n"
-            command += f"#SBATCH --output={step}_{timestamp}\n"
+            command += f"#SBATCH --output={sched_log}\n"
             command += f"#SBATCH --nodes=1\n"
             command += f"#SBATCH --ntasks=1\n"
 
