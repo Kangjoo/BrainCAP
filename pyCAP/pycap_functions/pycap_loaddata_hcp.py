@@ -32,26 +32,41 @@ def load_hpc_norm_subject_wb(dataname):
 
 
 def load_hpc_groupdata_wb(filein, param):
-    homedir = filein.homedir
+    homedir = filein.sessions_folder
     sublist = filein.sublist
     fname = filein.fname
     gsr = param.gsr
     unit = param.unit
-    sdim = param.sdim
-    tdim = param.tdim
+    #sdim = param.sdim
+    #tdim = param.tdim
 
     msg = "============================================"
     logging.info(msg)
     msg = "[whole-brain] Load " + unit + \
         "-level time-series data preprocessed with " + gsr + ".."
     logging.info(msg)
+    
+    #set up dimensions for subject concatenated array
+    tdim = 0
+    sdim = 0
+    for idx, subID in enumerate(sublist):
+        # - Load fMRI data
+        dataname = os.path.join(homedir, str(subID), fname)
+        dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
 
-    data_all = np.empty((len(sublist) * tdim, sdim), dtype=np.float32)
-    sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int)
+        tdim += dshape[0]
+        if sdim == 0:
+            sdim = dshape[1]
+        else:
+            if sdim != dshape[1]:
+                exit() #ERROR
+
+    data_all = np.empty((tdim, sdim), dtype=np.float32)
+    sublabel_all = np.empty((tdim, ), dtype=np.int)
     ptr = 0
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
-        dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
+        dataname = os.path.join(homedir, str(subID), fname)
         zdata = load_hpc_norm_subject_wb(dataname)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
