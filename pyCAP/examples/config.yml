@@ -27,15 +27,15 @@ concatenate_bolds:
     mail: samuel.brege@yale.edu
     time: "1:00:00"
 
-pycap_prep:
-  scrubbing: y
-  gsr: y
+prep:
+  scrubbing: "y"
+  gsr: "y"
   bold_path: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
   n_splits: 1
   motion_type: fd
   motion_path: images/functional/bold2143_conc.bstats
-  display_motion: n
-  overwrite: no
+  display_motion: "n"
+  overwrite: "no"
   scheduler:
     type: NONE
     cpu_mem: 16G
