@@ -27,7 +27,7 @@ from memory_profiler import profile
 def frameselection_wb(inputdata, labeldata, filein, param):
     # inputdata: (concantenated time points x space) matrix of whole brain time-course
 
-    outdir = filein.outdir
+    outdir = filein.datadir
     sublist = filein.sublist
 
     msg = "============================================"
@@ -49,7 +49,7 @@ def frameselection_wb(inputdata, labeldata, filein, param):
     #   Motion scrubbing
     # ------------------------------------------------------------------------
 
-    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist)
+    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist, inputdata)
 
     # ------------------------------------------------------------------------
     #   Combine all frame flags (1: select, 0: remove)
@@ -86,19 +86,19 @@ def frameselection_wb(inputdata, labeldata, filein, param):
     # labeldata_fsel_outfilen = outdir + "flabel_subID.csv"
     # df = pd.DataFrame(data=labeldata_fsel.astype(float))
     # df.to_csv(labeldata_fsel_outfilen, sep=' ', header=False, float_format='%d', index=False)
-    labeldata_fsel_outfilen = outdir + "Framelabel_subID.hdf5"
+    labeldata_fsel_outfilen = os.path.join(outdir, "Framelabel_subID.hdf5")
 
     # if os.path.exists(labeldata_fsel_outfilen):
-    if (param.kmean_k == param.kmean_krange[0]):
-        f = h5py.File(labeldata_fsel_outfilen, "w")
-        dset1 = f.create_dataset(
-            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=labeldata_fsel)
-        f.close()
-        msg = "Saved subject labels corresponding to selected frames in " + labeldata_fsel_outfilen
-        logging.info(msg)
-    else:
-        msg = "Do not save Frame-wise subject labels. The Framelabel file may exist: " + labeldata_fsel_outfilen
-        logging.info(msg)
+    #if (param.kmean_k == param.kmean_krange[0]):
+    f = h5py.File(labeldata_fsel_outfilen, "w")
+    dset1 = f.create_dataset(
+        "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=labeldata_fsel)
+    f.close()
+    msg = "Saved subject labels corresponding to selected frames in " + labeldata_fsel_outfilen
+    logging.info(msg)
+    # else:
+    #     msg = "Do not save Frame-wise subject labels. The Framelabel file may exist: " + labeldata_fsel_outfilen
+    #     logging.info(msg)
 
     return inputdata_fsel, labeldata_fsel
 
@@ -109,7 +109,7 @@ def frameselection_wb(inputdata, labeldata, filein, param):
 def frameselection_wb_daylabel(inputdata, daydata, filein, param):
     # inputdata: (concantenated time points x space) matrix of whole brain time-course
 
-    outdir = filein.outdir
+    outdir = filein.datadir
     sublist = filein.sublist
 
     msg = "============================================"
@@ -131,7 +131,7 @@ def frameselection_wb_daylabel(inputdata, daydata, filein, param):
     #   Motion scrubbing
     # ------------------------------------------------------------------------
 
-    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist)
+    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist, inputdata)
 
     # ------------------------------------------------------------------------
     #   Combine all frame flags (1: select, 0: remove)
@@ -164,7 +164,7 @@ def frameselection_wb_daylabel(inputdata, daydata, filein, param):
     # labeldata_fsel_outfilen = outdir + "flabel_subID.csv"
     # df = pd.DataFrame(data=labeldata_fsel.astype(float))
     # df.to_csv(labeldata_fsel_outfilen, sep=' ', header=False, float_format='%d', index=False)
-    daydata_fsel_outfilen = outdir + "Framelabel_day.hdf5"
+    daydata_fsel_outfilen = os.path.join(outdir, "Framelabel_day.hdf5")
 
 
     f = h5py.File(daydata_fsel_outfilen, "w")
@@ -186,7 +186,7 @@ def frameselection_wb_daylabel(inputdata, daydata, filein, param):
 def motion_qc(filein, param):
     # inputdata: (concantenated time points x space) matrix of whole brain time-course
 
-    outdir = filein.outdir
+    outdir = filein.datadir
     sublist = filein.sublist
 
     msg = "============================================"
@@ -210,10 +210,10 @@ def motion_qc(filein, param):
 
 
 def frameselection_Tsubsample(allTdim, filein, param):
-    filein.Tsubsample_filen = filein.outdir + "Tsubsample_" + param.seedIDname + "_P" + \
-        str(param.randTthreshold) + "_" + param.unit + \
-        "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
-
+    # filein.Tsubsample_filen = filein.datadir + "Tsubsample_" + param.seedIDname + "_P" + \
+    #     str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
+    filein.Tsubsample_filen = os.path.join(filein.datadir, "Tsubsample_" + param.seedIDname + "_P" + \
+        str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
     if os.path.exists(filein.Tsubsample_filen):
         msg = "File exists. Load the list of random temporal subsampling data file: " + filein.Tsubsample_filen
         logging.info(msg)
@@ -260,14 +260,14 @@ def frameselection_Tsubsample(allTdim, filein, param):
 
 
 # @profile
-def frameselection_motion(filein, param, sublist):
+def frameselection_motion(filein, param, sublist, inputdata):
     scrubbing = param.scrubbing
-    if scrubbing == "y":
+    if scrubbing == "yes":
         motion_type = param.motion_type
         motion_threshold = param.motion_threshold
 
     flag_scrubbed_all = np.array([])
-    if scrubbing == "y":
+    if scrubbing == "yes":
 
         msg = "motion scrubbing: find time-frames with excessive motion (" + \
             motion_type + ">" + str(motion_threshold) + "mm).."
@@ -277,7 +277,7 @@ def frameselection_motion(filein, param, sublist):
         # - Select frames with low motion (1: select, 0: scrubbed)
         flag_scrubbed = np.array(motion_metric < motion_threshold, dtype=int)
 
-    elif scrubbing == "n":
+    elif scrubbing == "no":
 
         msg = "motion scrubbing: not performed."
         logging.info(msg)

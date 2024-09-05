@@ -52,8 +52,12 @@ def load_hpc_groupdata_wb(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
-        dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
-
+        #If data was concatenated using pycap_concatenate, dimensions are saved
+        if os.path.exists(dataname + ".npy"):
+            dshape = np.load(dataname + ".npy")
+        #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
+        else:
+            dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
         tdim += dshape[0]
         if sdim == 0:
             sdim = dshape[1]
@@ -62,7 +66,7 @@ def load_hpc_groupdata_wb(filein, param):
                 exit() #ERROR
 
     data_all = np.empty((tdim, sdim), dtype=np.float32)
-    sublabel_all = np.empty((tdim, ), dtype=np.int)
+    sublabel_all = np.empty((tdim, ), dtype=np.int32)
     ptr = 0
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
@@ -89,8 +93,10 @@ def load_hpc_groupdata_wb(filein, param):
 
 
 def load_hpc_groupdata_wb_usesaved(filein, param):
-    filein.groupdata_wb_filen = filein.datadir + "hpc_groupdata_wb_" + \
-        param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
+    # filein.groupdata_wb_filen = filein.datadir + "hpc_groupdata_wb_" + \
+    #     param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
+    filein.groupdata_wb_filen = os.path.join(filein.datadir,  "hpc_groupdata_wb_" + \
+        param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
     if os.path.exists(filein.groupdata_wb_filen):
         msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
         logging.info(msg)
@@ -124,7 +130,7 @@ def load_hpc_groupdata_motion(filein, param):
     # In (filename).bstats,the columns may be provided in the following order:
     # frame number, n, m, min, max, var, sd, dvars, dvarsm, dvarsme, fd.
 
-    homedir = filein.homedir
+    homedir = filein.sessions_folder
     sublist = filein.sublist
     motion_type = param.motion_type
 
@@ -183,7 +189,7 @@ def load_hpc_groupdata_motion(filein, param):
 
 
 def load_hpc_groupdata_wb_daylabel(filein, param):
-    homedir = filein.homedir
+    homedir = filein.sessions_folder
     sublist = filein.sublist
     fname = filein.fname
     gsr = param.gsr
@@ -198,8 +204,8 @@ def load_hpc_groupdata_wb_daylabel(filein, param):
     logging.info(msg)
 
     data_all = np.empty((len(sublist) * tdim, sdim), dtype=np.float32)
-    sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int)
-    daylabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int)
+    sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
+    daylabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
     ptr = 0
     for idx, subID in enumerate(sublist):
         # - Load fMRI data

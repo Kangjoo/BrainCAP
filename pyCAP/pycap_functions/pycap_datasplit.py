@@ -24,7 +24,8 @@ def subsplit(filein, param):
     logging.info(msg)
 
     filein.sublistfull = filein.sublist
-    splitdata_outfilen = filein.outdir + "subsplit_datalist.hdf5"
+    #splitdata_outfilen = filein.outdir + "subsplit_datalist.hdf5"
+    splitdata_outfilen = os.path.join(filein.datadir, "subsplit_datalist.hdf5")
     msg = splitdata_outfilen
     logging.info(msg)
     
@@ -55,7 +56,7 @@ def subsplit(filein, param):
         # generate list of subjects for training/test datasets
         SubIdxlist = np.arange(0, len(filein.sublist))
         spsize = math.floor(SubIdxlist.shape[0]/2)
-        if param.subsplittype == "random":
+        if param.subsplit_type == "random":
             ms_kwargs = {"train_size": spsize, "test_size": spsize}
             test_sublist_idx, training_sublist_idx = sklearn.model_selection.train_test_split(
                 SubIdxlist, **ms_kwargs)
@@ -69,7 +70,7 @@ def subsplit(filein, param):
             for index in training_sublist_idx:
                 training_sublist.append(filein.sublist[index])
 
-#         elif param.subsplittype == "manual":
+#         elif param.subsplit_type == "manual":
 #             training_sublist_idx = np.array(range(0, spsize, 1))
 #             test_sublist_idx = np.array(range(spsize, spsize*2, 1)) #example method for manual type
 
