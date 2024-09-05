@@ -6,6 +6,7 @@ from pycap_functions.pycap_loaddata_hcp import concatenate_data, concatenate_mot
 import nibabel as nib
 import logging
 import time
+import numpy as np
 
 def dir_path(path):
     if os.path.isdir(path):
@@ -77,13 +78,19 @@ for session in slist:
         logging.info(f"           Warning: Existing concatenated bold file found")
         if args.overwrite.lower() == 'yes':
             logging.info(f"           overwrite=yes, overwriting...")
-            nib.save(concatenate_data(bolds, args.ndummy), conc_path)
+            conc = concatenate_data(bolds, args.ndummy)
+            nib.save(conc, conc_path)
+            np.save(conc_path, conc.get_fdata().shape)
             logging.info(f"        File {conc_path} created!")
         else:
             logging.info(f"           overwrite=no, skipping...")
     else:
-        nib.save(concatenate_data(bolds, args.ndummy), conc_path)
+        conc = concatenate_data(bolds, args.ndummy)
+        nib.save(conc, conc_path)
+        np.save(conc_path, conc.get_fdata().shape)
         logging.info(f"        File {conc_path} created!")
+
+    del conc
 
     if conc_motion:
         logging.info(f"        Running motion concatenation...")
