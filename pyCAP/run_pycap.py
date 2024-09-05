@@ -53,11 +53,11 @@ arg_dict = {'required':
                 {'concatenate_bolds':
                  ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path'],
                  'prep':
-                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder']
+                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path']
                  }, 
             'optional':
                 {'concatenate_bolds':
-                 ['overwrite', 'ndummy', 'motion_files', 'motion_out', 'log_path'],
+                 ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
                  'prep':
                  ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite']
                  }
@@ -211,7 +211,7 @@ for command, log in zip(commands, logs):
                     print("ERROR! Step failed to launch, halting execution!")
                     print(f"Attempted to run the following command:\n {command}")
                     exit()
-                time.sleep(0.1)
+                time.sleep(0.01)
                 t += 1
             print(f"Running command:\n {command}\n")
             print(f"Command launched succesfully! Showing output from {log}")
