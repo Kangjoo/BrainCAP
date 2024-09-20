@@ -62,16 +62,17 @@ parser.add_argument("--sessions_folder", type=dir_path, help="Home directory pat
 parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
 parser.add_argument("--analysis_folder", type=dir_path, help="Output directory path")
 parser.add_argument("--n_splits", type=int, default=1, help="Number of splits to run, default 1")
+#In wrapper script, derived from k range
 parser.add_argument("--n_k", type=int, help="Number of clusters for k-means clustering")
-parser.add_argument("--min_k", type=int, help="Mininum k for k-means clustering")
-parser.add_argument("--max_k", type=int, help="Maximum k for k-means clustering")
+#Shouldn't be necessary anymore? #parser.add_argument("--min_k", type=int, help="Mininum k for k-means clustering")
+#Shouldn't be necessary anymore? #parser.add_argument("--max_k", type=int, help="Maximum k for k-means clustering")
 parser.add_argument("--max_iter", type=int, help="Iterations for k-means clustering")
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
 parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
 parser.add_argument("--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
-parser.add_argument("--seed_name", type=str, help="Seed name")
-parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
-parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
+#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argaument("--seed_name", type=str, help="Seed name")
+#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
+#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
 parser.add_argument("--subsplit_type", default='random', type=str, help="random/days, default 'random'")
@@ -184,7 +185,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublist = parse_slist(args.sessions_list)
+filein.sublist = parse_slist(args.seasions_list)
 filein.pscalar_filen = args.parc_template
 
 filein.fname = args.bold_path
