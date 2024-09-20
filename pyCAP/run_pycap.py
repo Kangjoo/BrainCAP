@@ -41,31 +41,37 @@ def follow(filepath, threshold=None):
             continue
         stall_counter = 0
         yield line
+
+def parse_bool():
+    return
     
 #Main function
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
 pp = pprint.PrettyPrinter(indent=1)
 
-#Dict containing required and optional parameters for each step, should exactly match the actual flags
-#includes internally set params (like log_path)
-arg_dict = {'required':
-                {'concatenate_bolds':
-                 ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path'],
-                 'prep':
-                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path']
-                 }, 
-            'optional':
-                {'concatenate_bolds':
-                 ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
-                 'prep':
-                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite']
-                 }
-            }
+#ATTEMPTING TO DEPRECATE
+
+# #Dict containing required and optional parameters for each step, should exactly match the actual flags
+# #includes internally set params (like log_path)
+# arg_dict = {'required':
+#                 {'concatenate_bolds':
+#                  ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path'],
+#                  'prep':
+#                  ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path']
+#                  }, 
+#             'optional':
+#                 {'concatenate_bolds':
+#                  ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
+#                  'prep':
+#                  ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite']
+#                  }
+#             }
 
 #Dict containing script paths for each step
 step_dict = {'concatenate_bolds':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_concatenate.py',
-             'prep':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_prep.py'}
+             'prep':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_prep.py',
+             'run':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_run.py'}
 
 schedulers = ['NONE','SLURM','PBS']
 
@@ -176,19 +182,26 @@ for step in args['steps']:
     command += f"python {step_dict[step]} "
 
     #Required Params
-    for arg in arg_dict['required'][step]:
-        if arg not in step_args.keys():
-            print(f"ERROR! Missing required argument '{arg}' for {step}. Exiting...")
-            exit()
+    for arg in step_args.keys():
+        if arg == 'scheduler':
+            continue
         if type(step_args[arg]) == list:
             step_args[arg] = ','.join(step_args[arg])
         command += f"--{arg} {step_args[arg]} "
 
-    for arg in arg_dict['optional'][step]:
-        if arg in step_args.keys():
-            if type(step_args[arg]) == list:
-                step_args[arg] = ','.join(step_args[arg])
-            command += f"--{arg} {step_args[arg]} "
+    # for arg in arg_dict['required'][step]:
+    #     if arg not in step_args.keys():
+    #         print(f"ERROR! Missing required argument '{arg}' for {step}. Exiting...")
+    #         exit()
+    #     if type(step_args[arg]) == list:
+    #         step_args[arg] = ','.join(step_args[arg])
+    #     command += f"--{arg} {step_args[arg]} "
+
+    # for arg in arg_dict['optional'][step]:
+    #     if arg in step_args.keys():
+    #         if type(step_args[arg]) == list:
+    #             step_args[arg] = ','.join(step_args[arg])
+    #         command += f"--{arg} {step_args[arg]} "
 
     commands.append(command)
 
