@@ -42,8 +42,19 @@ def follow(filepath, threshold=None):
         stall_counter = 0
         yield line
 
-def parse_bool():
-    return
+def convert_bool(arg_dict):
+    """
+    Convert 'True' and 'False' to 'yes' and 'no'
+
+    YAML accepts bool (and will even convert string to bools). For parsing CLI arguments
+    we need strings.
+    """
+    for arg in arg_dict.keys():
+        if isinstance(arg_dict[arg], bool):
+            if arg_dict[arg]: arg_dict[arg] == 'yes'
+            else: arg_dict[arg] == 'no'
+
+    return arg_dict
     
 #Main function
 
