@@ -37,10 +37,23 @@ plt.switch_backend('agg')
 
 def clusterdata(inputdata, filein, param):
 
-    outdir = filein.outdir
+    outdir = filein.outpath
     k = param.kmean_k
     kmethod = param.kmean_kmethod
     max_iter = param.kmean_max_iter
+    overwrite = param.overwrite
+
+    P_outfilen = outdir + "kmeans_k" + str(k) + "_flabel_cluster.csv"
+    score_outfilen = outdir + "kmeans_k" + str(k) + "_" + kmethod + "_score.csv"
+
+    for file in [P_outfilen, score_outfilen]:
+        if os.path.exists(file):
+            logging.info(f"PyCap file {file} found")
+            if overwrite == 'yes':
+                logging.info("    overwrite 'yes', existing file will be overwritten.")
+            else:
+                logging.info("    overwrite 'no', existing file will be saved. Set overwrite 'yes' to re-run.")
+                return None, None
 
     msg = "============================================"
     logging.info(msg)
@@ -61,13 +74,13 @@ def clusterdata(inputdata, filein, param):
     #     save output files
     # -----------------------------
 
-    P_outfilen = outdir + "kmeans_k" + str(k) + "_flabel_cluster.csv"
+    
     df = pd.DataFrame(data=P.astype(float))
     df.to_csv(P_outfilen, sep=' ', header=False, float_format='%d', index=False)
     msg = "Saved cluster labels corresponding to frames in " + P_outfilen
     logging.info(msg)
 
-    score_outfilen = outdir + "kmeans_k" + str(k) + "_" + kmethod + "_score.csv"
+    
     np.savetxt(score_outfilen, score)
     msg = "Saved " + kmethod + " score in " + score_outfilen
     logging.info(msg)
@@ -77,7 +90,7 @@ def clusterdata(inputdata, filein, param):
 
 def finalcluster2cap(inputdata, filein, param):
 
-    outdir = filein.outdir
+    outdir = filein.outpath
     pscalar_filen = filein.pscalar_filen
     mink = param.kmean_krange[0]
     maxk = param.kmean_krange[1]+1  # plus 1 to match with python numpy indexing
@@ -205,7 +218,7 @@ def finalcluster2cap(inputdata, filein, param):
 
 
 def finalcluster2cap_hac(inputdata, filein, param):
-    outdir = filein.outdir
+    outdir = filein.outpath
     pscalar_filen = filein.pscalar_filen
     final_k = param.kmean_k
 
