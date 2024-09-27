@@ -61,23 +61,25 @@ def convert_bool(arg_dict):
 timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
 pp = pprint.PrettyPrinter(indent=1)
 
-#ATTEMPTING TO DEPRECATE
-
 # #Dict containing required and optional parameters for each step, should exactly match the actual flags
 # #includes internally set params (like log_path)
-# arg_dict = {'required':
-#                 {'concatenate_bolds':
-#                  ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path'],
-#                  'prep':
-#                  ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path']
-#                  }, 
-#             'optional':
-#                 {'concatenate_bolds':
-#                  ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
-#                  'prep':
-#                  ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite']
-#                  }
-#             }
+arg_dict = {'required':
+                {'concatenate_bolds':
+                 ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path'],
+                 'prep':
+                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path'],
+                 'run':
+                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'n_k']
+                 }, 
+            'optional':
+                {'concatenate_bolds':
+                 ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
+                 'prep':
+                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite'],
+                 'run':
+                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'save_image', 'k_method', 'max_iter', 'parc_file']
+                 }
+            }
 
 #Dict containing script paths for each step
 step_dict = {'concatenate_bolds':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_concatenate.py',
@@ -151,70 +153,99 @@ logs = []
 for step in args['steps']:
 
     step_args = parsed_args[step]
-    #Setup log path
+
     if 'logs_folder' not in step_args.keys():
         step_args['logs_folder'] = os.path.join(step_args['analysis_folder'], 'logs')
     if not os.path.exists(step_args['logs_folder']):
         os.makedirs(step_args['logs_folder'])
-    step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{timestamp}.log')
-    #Running as job directs output to it's own log, in which case better to use that for monitoring
-    if sched_type != "NONE":
-        sched_log = os.path.join(step_args['logs_folder'], f'{sched_type}_{step}_{timestamp}.log')
-        logs.append(sched_log)
+
+    #compatible steps can make use of ntasks and jobs
+    if step == "run":
+        min_k = step_args['k_range'][0]
+        ntasks = step_args['k_range'][-1] - min_k
+        jobs = step_args['n_splits']
+        del step_args['k_range'] #remove so not parsed later
+        del step_args['n_splits']
     else:
-        logs.append(step_args['log_path'])
-    
-    pp.pprint(step_args)
+        ntasks = 1
+        jobs = 1
+        min_k = None
 
-    #Build step command
-    command = ""
+    #job level, used for Ssplits
+    for job in range(jobs):
+        #Setup log path
+        step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{job}_{timestamp}.log')
+        #Running as job directs output to it's own log, in which case better to use that for monitoring
+        #Otherwise, commands and logs are launched at the 'task' level below
+        if sched_type != "NONE":
+            sched_log = os.path.join(step_args['logs_folder'], f'{sched_type}_{step}_{job}_{timestamp}.log')
+            logs.append(sched_log)
+        
+        pp.pprint(step_args)
 
-    #Currently unused
-    if sched_type.upper() == "NONE":
-        pass
+        #Command headers
+        if sched_type.upper() == "NONE":
+            command = ""
 
-    elif sched_type.upper() == "SLURM":
-        command = "#!/bin/bash\n"
-        command += f"#SBATCH -J {step}\n"
-        command += f"#SBATCH --mem-per-cpu={step_args['scheduler']['cpu_mem']}\n"
-        command += f"#SBATCH --cpus-per-task={step_args['scheduler']['cpus']}\n"
-        command += f"#SBATCH --partition={step_args['scheduler']['partition']}\n"
-        command += f"#SBATCH --time={step_args['scheduler']['time']}\n"
-        command += f"#SBATCH --output={sched_log}\n"
-        command += f"#SBATCH --nodes=1\n"
-        command += f"#SBATCH --ntasks=1\n"
+        elif sched_type.upper() == "SLURM":
+            command = "#!/bin/bash\n"
+            command += f"#SBATCH -J {step}\n"
+            command += f"#SBATCH --mem-per-cpu={step_args['scheduler']['cpu_mem']}\n"
+            command += f"#SBATCH --cpus-per-task={step_args['scheduler']['cpus']}\n"
+            command += f"#SBATCH --partition={step_args['scheduler']['partition']}\n"
+            command += f"#SBATCH --time={step_args['scheduler']['time']}\n"
+            command += f"#SBATCH --output={sched_log}\n"
+            command += f"#SBATCH --nodes=1\n"
+            command += f"#SBATCH --ntasks={ntasks}\n"
 
-        #SLURM output
-        logs.append(f"{step}_{timestamp}")
+        elif sched_type.upper() == "PBS":
+            pass
 
-    elif sched_type.upper() == "PBS":
-        pass
-    
-    command += f"python {step_dict[step]} "
+        #task level, used for individual k-means runs
+        for task in range(ntasks):
 
-    #Required Params
-    for arg in step_args.keys():
-        if arg == 'scheduler':
-            continue
-        if type(step_args[arg]) == list:
-            step_args[arg] = ','.join(step_args[arg])
-        command += f"--{arg} {step_args[arg]} "
+            if ntasks != 1:
+                step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{job}_{task}_{timestamp}.log')
 
-    # for arg in arg_dict['required'][step]:
-    #     if arg not in step_args.keys():
-    #         print(f"ERROR! Missing required argument '{arg}' for {step}. Exiting...")
-    #         exit()
-    #     if type(step_args[arg]) == list:
-    #         step_args[arg] = ','.join(step_args[arg])
-    #     command += f"--{arg} {step_args[arg]} "
+            #parameters that depend on task
+            if step == "run":
+                step_args['n_k'] = min_k + task
+                step_args['split'] = job + 1
 
-    # for arg in arg_dict['optional'][step]:
-    #     if arg in step_args.keys():
-    #         if type(step_args[arg]) == list:
-    #             step_args[arg] = ','.join(step_args[arg])
-    #         command += f"--{arg} {step_args[arg]} "
 
-    commands.append(command)
+            if ntasks != 1 and sched_type == "SLURM":
+                command += f"srun --ntasks=1 python {step_dict[step]} "
+            else:
+                command += f"python {step_dict[step]} "
+
+            for arg in arg_dict['required'][step]:
+                if arg not in step_args.keys():
+                    print(f"ERROR! Missing required argument '{arg}' for {step}. Exiting...")
+                    exit()
+                if type(step_args[arg]) == list:
+                    step_args[arg] = ','.join(step_args[arg])
+                command += f"--{arg} {step_args[arg]} "
+
+            for arg in arg_dict['optional'][step]:
+                if arg in step_args.keys():
+                    if type(step_args[arg]) == list:
+                        step_args[arg] = ','.join(step_args[arg])
+                    command += f"--{arg} {step_args[arg]} "
+
+            if ntasks != 1 and sched_type == "SLURM":
+                command += f"&\n"
+            
+            #commands launched at task level
+            if sched_type == "NONE":
+                commands.append(command)
+                logs.append(step_args['log_path'])
+                command = ""
+
+        if ntasks != 1 and sched_type == "SLURM":
+            command += f"wait"
+        if sched_type != "NONE":
+            commands.append(command)
+            
 
 job_id = None
 #Run commands
@@ -224,34 +255,36 @@ for command, log in zip(commands, logs):
     if sched_type.upper() == "NONE":
         if args['debug'] == "yes":
             print(command)
-        else:
-            run = subprocess.Popen(
-                    command, shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True)
-            
-            #Wait a moment so that the file is generated
-            t = 0
-            while not os.path.exists(log):
-                if t > 1000:
-                    print("ERROR! Step failed to launch, halting execution!")
-                    print(f"Attempted to run the following command:\n {command}")
-                    exit()
-                time.sleep(0.01)
-                t += 1
-            print(f"Running command:\n {command}\n")
-            print(f"Command launched succesfully! Showing output from {log}")
-            #follows step output and prints it
-            runlog = follow(log, 6000)
-            for line in runlog:
-                p_line = line.replace("\n","")
-                print(p_line)
+            continue
 
-                if "STEP COMPLETE" in p_line:
-                    print("Step completed successfully!")
-                    break
+        run = subprocess.Popen(
+                command, shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True)
+        
+        #Wait a moment so that the file is generated
+        t = 0
+        print(log)
+        while not os.path.exists(log):
+            if t > 5000:
+                print("ERROR! Step failed to launch, halting execution!")
+                print(f"Attempted to run the following command:\n {command}")
+                exit()
+            time.sleep(0.01)
+            t += 1
+        print(f"Running command:\n {command}\n")
+        print(f"Command launched succesfully! Showing output from {log}")
+        #follows step output and prints it
+        runlog = follow(log, 6000)
+        for line in runlog:
+            p_line = line.replace("\n","")
+            print(p_line)
 
-                if "STEP FAIL" in p_line:
-                    print("ERROR! Step failed, halting execution!")
-                    break
+            if "STEP COMPLETE" in p_line:
+                print("Step completed successfully!")
+                break
+
+            if "STEP FAIL" in p_line:
+                print("ERROR! Step failed, halting execution!")
+                break
 
     elif sched_type.upper() == "SLURM":
         
@@ -260,6 +293,11 @@ for command, log in zip(commands, logs):
             run_com = f"sbatch --dependency afterok:{job_id}"
         else:
             run_com = "sbatch"
+
+        if args['debug'] == "yes":
+            print(run_com)
+            print(command)
+            continue
 
         run = subprocess.Popen(
                 run_com, shell=True, stdin=subprocess.PIPE, stdout=sout, stderr=serr, close_fds=True
