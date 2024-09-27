@@ -287,5 +287,5 @@ for split_i in range(args.n_splits):
         logging.info(msg)
 
 
-    # - Notify job completion
-    logging.info(f"--- STEP COMPLETE ---")
+# - Notify job completion
+logging.info(f"--- STEP COMPLETE ---")
