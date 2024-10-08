@@ -61,7 +61,7 @@ def clusterdata(inputdata, filein, param):
     logging.info(msg)
 
     kmeans_kwargs = {"init": "k-means++", "max_iter": max_iter, "random_state": 42}
-    kmeans = KMeans(n_clusters=k, **kmeans_kwargs).fit(inputdata)
+    kmeans = KMeans(n_clusters=k, n_init='auto', **kmeans_kwargs).fit(inputdata)
     P = kmeans.predict(inputdata)
 
     if kmethod == "sse":
