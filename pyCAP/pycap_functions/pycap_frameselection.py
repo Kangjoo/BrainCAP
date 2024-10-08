@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import logging
 import h5py
-from pycap.pyCAP.pycap_functions.pycap_loaddata import load_groupdata_motion
+from pycap_functions.pycap_loaddata import load_groupdata_motion
 from memory_profiler import profile
 
 

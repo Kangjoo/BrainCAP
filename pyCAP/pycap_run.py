@@ -23,7 +23,7 @@ import argparse
 import itertools
 import pandas as pd
 import logging
-from pycap.pyCAP.pycap_functions.pycap_loaddata import *
+from pycap_functions.pycap_loaddata import *
 from pycap_functions.pycap_frameselection import *
 from pycap_functions.pycap_gen import *
 from pycap_functions.pycap_datasplit import *
