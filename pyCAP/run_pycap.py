@@ -148,11 +148,13 @@ for step in args['steps']:
 commands = []
 #Contains list of output logs (command logs for no scheduler, job logs for scheduler)
 logs = []
+#used for job dependencies
+steps = []
 
 #Setup commands and params for each step
 for step in args['steps']:
 
-    step_args = parsed_args[step]
+    step_args = convert_bool(parsed_args[step])
 
     if 'logs_folder' not in step_args.keys():
         step_args['logs_folder'] = os.path.join(step_args['analysis_folder'], 'logs')
@@ -239,15 +241,19 @@ for step in args['steps']:
             if sched_type == "NONE":
                 commands.append(command)
                 logs.append(step_args['log_path'])
+                steps.append(step)
                 command = ""
 
         if ntasks != 1 and sched_type == "SLURM":
             command += f"wait"
         if sched_type != "NONE":
             commands.append(command)
+            steps.append(step)
             
 
-job_id = None
+prev_ids = None
+new_ids = []
+prev_step = None
 #Run commands
 for command, log in zip(commands, logs):
     serr = subprocess.STDOUT
@@ -262,7 +268,6 @@ for command, log in zip(commands, logs):
         
         #Wait a moment so that the file is generated
         t = 0
-        print(log)
         while not os.path.exists(log):
             if t > 5000:
                 print("ERROR! Step failed to launch, halting execution!")
@@ -288,9 +293,13 @@ for command, log in zip(commands, logs):
 
     elif sched_type.upper() == "SLURM":
         
-        #Set previous job as a dependancy
-        if job_id != None:
-            run_com = f"sbatch --dependency afterok:{job_id}"
+        #If new step, swap dependencies
+        if step != prev_step:
+            prev_ids = ":".join(new_ids)
+            new_ids = []
+
+        if prev_ids != '':
+            run_com = f"sbatch --dependency afterok:{prev_ids}"
         else:
             run_com = "sbatch"
 
@@ -306,8 +315,9 @@ for command, log in zip(commands, logs):
         out = run.communicate()[0].decode("utf-8")
         run.stdin.close()
 
-        job_id = out.split("Submitted batch job ")[1]
-        print(f"Launched job {job_id}")
+        new_ids.append(out.split("Submitted batch job ")[1])
+        prev_step = step
+        print(f"Launched job {new_ids[-1]}")
         print("Follow command progress in:")
         print(f"{log}")
 
