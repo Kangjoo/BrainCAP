@@ -75,9 +75,9 @@ arg_dict = {'required':
                 {'concatenate_bolds':
                  ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
                  'prep':
-                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite'],
+                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type'],
                  'run':
-                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'save_image', 'k_method', 'max_iter', 'parc_file']
+                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'k_method', 'max_iter', 'parc_file']
                  }
             }
 
