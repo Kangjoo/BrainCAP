@@ -84,7 +84,7 @@ parser.add_argument("--display_motion", type=str,
                     help="Display motion parameter or not (y/n)")
 #parser.add_argument("-step", "--step", type=str, help="Step to run (step1 or step2)")
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
-parser.add_argument("-l", "--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
+parser.add_argument("-l", "--log_path", default='./run_pycap.log', help='Path to output log', required=False)
 args = parser.parse_args()  # Read arguments from command line
 
 logging.basicConfig(level=logging.INFO,
