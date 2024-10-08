@@ -13,7 +13,7 @@
 
 # Imports
 from pycap_functions.pycap_frameselection import *
-from pycap_functions.pycap_loaddata_hcp import *
+from pycap.pyCAP.pycap_functions.pycap_loaddata import *
 from kneed import KneeLocator
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import PCA

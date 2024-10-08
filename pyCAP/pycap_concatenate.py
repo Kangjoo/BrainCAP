@@ -2,7 +2,7 @@
 
 import argparse
 import os
-from pycap_functions.pycap_loaddata_hcp import concatenate_data, concatenate_motion, parse_slist
+from pycap.pyCAP.pycap_functions.pycap_loaddata import concatenate_data, concatenate_motion, parse_slist
 import nibabel as nib
 import logging
 import time
