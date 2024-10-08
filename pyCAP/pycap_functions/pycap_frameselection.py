@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import logging
 import h5py
-from pycap_functions.pycap_loaddata_hcp import load_hpc_groupdata_motion
+from pycap_functions.pycap_loaddata_hcp import load_groupdata_motion
 from memory_profiler import profile
 
 
@@ -289,7 +289,7 @@ def frameselection_motion(filein, param, sublist, inputdata):
             motion_type + ">" + str(motion_threshold) + "mm).."
         logging.info(msg)
         # -load motion data (time points x n_subjects)
-        motion_metric = load_hpc_groupdata_motion(filein=filein, param=param)
+        motion_metric = load_groupdata_motion(filein=filein, param=param)
         # - Select frames with low motion (1: select, 0: scrubbed)
         flag_scrubbed = np.array(motion_metric < motion_threshold, dtype=int)
 

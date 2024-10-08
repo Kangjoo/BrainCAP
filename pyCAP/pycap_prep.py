@@ -253,7 +253,7 @@ for split_i in range(args.n_splits):
         # - Load a time by space data matrix from individual and temporally concatenate
         # -------------------------------------------
 
-        data_all, sublabel_all = load_hpc_groupdata_wb_usesaved(filein=filein, param=param)
+        data_all, sublabel_all = load_groupdata_wb_usesaved(filein=filein, param=param)
         msg = "    >> np.unique(sublabel_all) : " + str(np.unique(sublabel_all))
         logging.info(msg)
 
@@ -263,7 +263,7 @@ for split_i in range(args.n_splits):
 
         if param.seed_type == "seedbased":
             # Reference: Liu and Duyn (2013), PNAS
-            seeddata_all = load_hpc_groupdata_seed_usesaved(filein=filein, param=param)
+            seeddata_all = load_groupdata_seed_usesaved(filein=filein, param=param)
             data_all_fsel, sublabel_all_fsel = frameselection_seed(
                 inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
         elif param.seed_type == "seedfree":

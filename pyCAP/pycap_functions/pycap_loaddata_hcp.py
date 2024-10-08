@@ -22,7 +22,7 @@ import h5py
 # @profile
 
 
-def load_hpc_norm_subject_wb(dataname):
+def load_norm_subject_wb(dataname):
     # an individual (time points x space) matrix
     data = nib.load(dataname).get_fdata(dtype=np.float32)
     zdata = stats.zscore(data, axis=0)  # Normalize each time-series
@@ -31,7 +31,7 @@ def load_hpc_norm_subject_wb(dataname):
 
 
 
-def load_hpc_groupdata_wb(filein, param):
+def load_groupdata_wb(filein, param):
     homedir = filein.sessions_folder
     sublist = filein.sublist
     fname = filein.fname
@@ -71,7 +71,7 @@ def load_hpc_groupdata_wb(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
-        zdata = load_hpc_norm_subject_wb(dataname)
+        zdata = load_norm_subject_wb(dataname)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
         subid_v = [idx] * zdata.shape[0]
@@ -92,7 +92,7 @@ def load_hpc_groupdata_wb(filein, param):
     return data_all, sublabel_all
 
 
-def load_hpc_groupdata_wb_usesaved(filein, param):
+def load_groupdata_wb_usesaved(filein, param):
     # filein.groupdata_wb_filen = filein.datadir + "hpc_groupdata_wb_" + \
     #     param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
     filein.groupdata_wb_filen = os.path.join(filein.datadir,  "hpc_groupdata_wb_" + \
@@ -109,7 +109,7 @@ def load_hpc_groupdata_wb_usesaved(filein, param):
         msg = "File does not exist. Load individual whole-brain fMRI data."
         logging.info(msg)
 
-        data_all, sublabel_all = load_hpc_groupdata_wb(filein=filein, param=param)
+        data_all, sublabel_all = load_groupdata_wb(filein=filein, param=param)
         f = h5py.File(filein.groupdata_wb_filen, "w")
         dset1 = f.create_dataset(
             "data_all", (data_all.shape[0], data_all.shape[1]), dtype='float32', data=data_all)
@@ -123,7 +123,7 @@ def load_hpc_groupdata_wb_usesaved(filein, param):
 
 
 
-def load_hpc_groupdata_motion(filein, param):
+def load_groupdata_motion(filein, param):
     # load motion parameters estimated using QuNex
     # https://bitbucket.org/oriadev/qunex/wiki/UsageDocs/MovementScrubbing
     # Use outputs from the command `general_compute_bold_list_stats`
@@ -188,7 +188,7 @@ def load_hpc_groupdata_motion(filein, param):
 
 
 
-def load_hpc_groupdata_wb_daylabel(filein, param):
+def load_groupdata_wb_daylabel(filein, param):
     homedir = filein.sessions_folder
     sublist = filein.sublist
     fname = filein.fname
@@ -210,7 +210,7 @@ def load_hpc_groupdata_wb_daylabel(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
-        zdata = load_hpc_norm_subject_wb(dataname)
+        zdata = load_norm_subject_wb(dataname)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
         subid_v = [subID] * zdata.shape[0]
@@ -291,7 +291,7 @@ def parse_slist(sessionsfile):
 
     return sessions
 
-def load_hpc_norm_subject_seed(dataname, seedID):
+def load_norm_subject_seed(dataname, seedID):
     data = nib.load(dataname).get_fdata(dtype=np.float32)  # individual (time points x space) matrix
     # Because python array starts with 0, where parcel ID starts with 1
     seedID_act = np.array(seedID) - 1
@@ -303,7 +303,7 @@ def load_hpc_norm_subject_seed(dataname, seedID):
     del data
     return zdata
 
-def load_hpc_groupdata_seed(filein, param):
+def load_groupdata_seed(filein, param):
     homedir = filein.sessions_folder
     sublist = filein.sublist
     fname = filein.fname
@@ -335,7 +335,7 @@ def load_hpc_groupdata_seed(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load the mean seed time-course
         dataname = dataname = homedir + str(subID) + "/images/functional/" + fname
-        zdata = load_hpc_norm_subject_seed(dataname, seedID)
+        zdata = load_norm_subject_seed(dataname, seedID)
         seeddata_all[:, idx] = zdata
 
         msg = "(Subject " + str(idx) + ")" + dataname + \
@@ -349,7 +349,7 @@ def load_hpc_groupdata_seed(filein, param):
     logging.info(msg)
     return seeddata_all
 
-def load_hpc_groupdata_seed_usesaved(filein, param):
+def load_groupdata_seed_usesaved(filein, param):
     # filein.groupdata_seed_filen = filein.datadir + "hpc_groupdata_" + \
     #     param.seedIDname + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
     filein.groupdata_seed_filen = os.path.join(filein.datadir,  "hpc_groupdata_wb_" + \
@@ -365,7 +365,7 @@ def load_hpc_groupdata_seed_usesaved(filein, param):
         msg = "File does not exist. Load individual seed-region fMRI data."
         logging.info(msg)
 
-        seeddata_all = load_hpc_groupdata_seed(filein=filein, param=param)
+        seeddata_all = load_groupdata_seed(filein=filein, param=param)
         f = h5py.File(filein.groupdata_seed_filen, "w")
         dset1 = f.create_dataset(
             "seeddata_all", (seeddata_all.shape[0], seeddata_all.shape[1]), dtype='float32', data=seeddata_all)
