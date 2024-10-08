@@ -54,10 +54,8 @@ def local_path(path):
 parser = argparse.ArgumentParser()
 parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
 #parser.add_argument("-ci", "--savecapimg", type=str, help="Save CAP images or not (y/n)")
-#parser.add_argument("-d", "--ndummy", type=int, help="Number of dummy scans to remove")
-#parser.add_argument("-e", "--kmethod", type=str, help="(sse/silhouette)")
-#parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
-#parser.add_argument("-et", "--eventtype", type=str, help="activation/deactivation/both")
+parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
+parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both")
 parser.add_argument("--gsr", type=str, default="y", help="(y/n)")
 parser.add_argument("--sessions_folder", help="Home directory path")
 parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
@@ -138,17 +136,17 @@ param.subsplit_type = args.subsplit_type
 
 # - parameters for seed signal selection
 param.seed_type = args.seed_type
-# if param.seed_type == "seedbased":
-#     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion'], 
-#                       'Prep', '--seed_type=seedbased')
-#     param.seedIDname = args.seed_name
-#     param.seedID = eval(param.seedIDname)
-#     param.event_combine = args.event_combine
-#     param.eventtype = args.eventtype
-#     param.sig_thresholdtype = args.seed_threshtype
-#     param.sig_threshold = args.seed_threshold
+if param.seed_type == "seedbased":
+    utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
+                      'Prep', '--seed_type=seedbased')
+    param.seedIDname = args.seed_name
+    param.seedID = eval(param.seedIDname)
+    param.event_combine = args.event_combine
+    param.eventtype = args.event_type
+    param.sig_thresholdtype = args.seed_threshtype
+    param.sig_threshold = args.seed_threshold
 #Defaults
-if param.seed_type == "seedfree":
+elif param.seed_type == "seedfree":
     param.seedIDname = param.seed_type
     param.time_threshold = args.time_threshold
     param.sig_thresholdtype = "P"
@@ -263,12 +261,12 @@ for split_i in range(args.n_splits):
         # - Frame-selection to find the moments of activation
         # -------------------------------------------
 
-        # if param.seed_type == "seedbased":
-        #     # Reference: Liu and Duyn (2013), PNAS
-        #     seeddata_all = load_hpc_groupdata_seed_usesaved(filein=filein, param=param)
-        #     data_all_fsel, sublabel_all_fsel = frameselection_seed(
-        #         inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
-        if param.seed_type == "seedfree":
+        if param.seed_type == "seedbased":
+            # Reference: Liu and Duyn (2013), PNAS
+            seeddata_all = load_hpc_groupdata_seed_usesaved(filein=filein, param=param)
+            data_all_fsel, sublabel_all_fsel = frameselection_seed(
+                inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
+        elif param.seed_type == "seedfree":
             # Reference: Liu et al. (2013), Front. Syst. Neurosci.
             data_all_fsel, sublabel_all_fsel = frameselection_wb(
                 inputdata=data_all, labeldata=sublabel_all, filein=filein, param=param)
@@ -280,8 +278,8 @@ for split_i in range(args.n_splits):
         # - Delete variable to save space
         # -------------------------------------------
         del data_all, sublabel_all, data_all_fsel, sublabel_all_fsel
-        # if param.seed_type == "seedbased":
-        #     del seeddata_all
+        if param.seed_type == "seedbased":
+            del seeddata_all
 
         msg = "\n"
         logging.info(msg)

@@ -290,3 +290,87 @@ def parse_slist(sessionsfile):
             raise
 
     return sessions
+
+def load_hpc_norm_subject_seed(dataname, seedID):
+    data = nib.load(dataname).get_fdata(dtype=np.float32)  # individual (time points x space) matrix
+    # Because python array starts with 0, where parcel ID starts with 1
+    seedID_act = np.array(seedID) - 1
+    seedID_act = seedID_act.tolist()
+    # - select seed region time-courses
+    seeddata = data[:, seedID_act]  # individual (time points x n_seed) matrix
+    seedmean = seeddata.mean(axis=1)
+    zdata = stats.zscore(seedmean, axis=0)  # - Normalize each time-series
+    del data
+    return zdata
+
+def load_hpc_groupdata_seed(filein, param):
+    homedir = filein.sessions_folder
+    sublist = filein.sublist
+    fname = filein.fname
+    gsr = param.gsr
+    unit = param.unit
+    seedID = param.seedID
+
+    msg = "============================================"
+    logging.info(msg)
+    msg = "[seed-region] seedID: " + \
+        str(seedID) + ", load " + unit + "-level time-series preprocessed with " + gsr + ".."
+    logging.info(msg)
+
+    #set up dimensions for subject concatenated array
+    tdim = 0
+    for idx, subID in enumerate(sublist):
+        # - Load fMRI data
+        dataname = os.path.join(homedir, str(subID), fname)
+        #If data was concatenated using pycap_concatenate, dimensions are saved
+        if os.path.exists(dataname + ".npy"):
+            dshape = np.load(dataname + ".npy")
+        #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
+        else:
+            dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
+        tdim += dshape[0]
+
+
+    seeddata_all = np.empty((tdim, len(sublist)), dtype=np.float32)
+    for idx, subID in enumerate(sublist):
+        # - Load the mean seed time-course
+        dataname = dataname = homedir + str(subID) + "/images/functional/" + fname
+        zdata = load_hpc_norm_subject_seed(dataname, seedID)
+        seeddata_all[:, idx] = zdata
+
+        msg = "(Subject " + str(idx) + ")" + dataname + \
+            " : seed average time-series " + str(zdata.shape)
+        logging.info(msg)
+
+        del zdata
+
+    msg = ">> Output: a (" + str(seeddata_all.shape[0]) + " x " + \
+        str(seeddata_all.shape[1]) + ") array of (seed average time-series x n_subjects)."
+    logging.info(msg)
+    return seeddata_all
+
+def load_hpc_groupdata_seed_usesaved(filein, param):
+    # filein.groupdata_seed_filen = filein.datadir + "hpc_groupdata_" + \
+    #     param.seedIDname + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
+    filein.groupdata_seed_filen = os.path.join(filein.datadir,  "hpc_groupdata_wb_" + \
+        param.seedIDname + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
+    if os.path.exists(filein.groupdata_seed_filen):
+        msg = "File exists. Load concatenated seed fMRI/label data file: " + filein.groupdata_seed_filen
+        logging.info(msg)
+
+        f = h5py.File(filein.groupdata_seed_filen, 'r')
+        seeddata_all = f['seeddata_all']
+
+    else:
+        msg = "File does not exist. Load individual seed-region fMRI data."
+        logging.info(msg)
+
+        seeddata_all = load_hpc_groupdata_seed(filein=filein, param=param)
+        f = h5py.File(filein.groupdata_seed_filen, "w")
+        dset1 = f.create_dataset(
+            "seeddata_all", (seeddata_all.shape[0], seeddata_all.shape[1]), dtype='float32', data=seeddata_all)
+        f.close()
+
+        msg = "Saved the average seed fMRI/label data in: " + filein.groupdata_seed_filen
+        logging.info(msg)
+    return seeddata_all

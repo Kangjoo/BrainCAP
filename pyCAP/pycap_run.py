@@ -55,8 +55,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
 parser.add_argument("--save_image", type=str, default='no', help="Save CAP images or not (y/n)")
 parser.add_argument("--k_method", default='silhouette', type=str, help="(sse/silhouette)")
-#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
-#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argument("-et", "--eventtype", type=str, help="activation/deactivation/both")
+parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
+parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both")
 parser.add_argument("--gsr", type=str, default="y", help="(y/n)")
 parser.add_argument("--sessions_folder", type=dir_path, help="Home directory path")
 parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
@@ -64,15 +64,13 @@ parser.add_argument("--analysis_folder", type=dir_path, help="Output directory p
 parser.add_argument("--split", type=int, default=1, help="Which split to run, default 1")
 #In wrapper script, derived from k range
 parser.add_argument("--n_k", type=int, help="Number of clusters for k-means clustering")
-#Shouldn't be necessary anymore? #parser.add_argument("--min_k", type=int, help="Mininum k for k-means clustering")
-#Shouldn't be necessary anymore? #parser.add_argument("--max_k", type=int, help="Maximum k for k-means clustering")
 parser.add_argument("--max_iter", type=int, default=1000, help="Max iterations for k-means clustering")
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
 parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
 parser.add_argument("--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
-#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argaument("--seed_name", type=str, help="Seed name")
-#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
-#SEEDPARAM, NEED TO ADD CODE FROM BITBUCKET #parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
+parser.add_argaument("--seed_name", type=str, help="Seed name")
+parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
+parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
 parser.add_argument("--subsplit_type", default='random', type=str, help="random/days, default 'random'")
@@ -136,15 +134,15 @@ param.subsplit_type = args.subsplit_type
 
 # - parameters for seed signal selection
 param.seed_type = args.seed_type
-# if param.seed_type == "seedbased":
-#     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion'], 
-#                       'Prep', '--seed_type=seedbased')
-#     param.seedIDname = args.seed_name
-#     param.seedID = eval(param.seedIDname)
-#     param.event_combine = args.event_combine
-#     param.eventtype = args.eventtype
-#     param.sig_thresholdtype = args.seed_threshtype
-#     param.sig_threshold = args.seed_threshold
+if param.seed_type == "seedbased":
+    utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
+                      'Prep', '--seed_type=seedbased')
+    param.seedIDname = args.seed_name
+    param.seedID = eval(param.seedIDname)
+    param.event_combine = args.event_combine
+    param.eventtype = args.event_type
+    param.sig_thresholdtype = args.seed_threshtype
+    param.sig_threshold = args.seed_threshold
 #Defaults
 if param.seed_type == "seedfree":
     param.seedIDname = param.seed_type
@@ -245,11 +243,11 @@ for sp in [1, 2]:
     # - Frame-selection to find the moments of activation
     # -------------------------------------------
 
-    # if param.seed_type == "seedbased":
-    #     # Reference: Liu and Duyn (2013), PNAS
-    #     seeddata_all = load_hpc_groupdata_seed_usesaved(filein=filein, param=param)
-    #     data_all_fsel, sublabel_all_fsel = frameselection_seed(
-    #         inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
+    if param.seed_type == "seedbased":
+        # Reference: Liu and Duyn (2013), PNAS
+        seeddata_all = load_hpc_groupdata_seed_usesaved(filein=filein, param=param)
+        data_all_fsel, sublabel_all_fsel = frameselection_seed(
+            inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
     if param.seed_type == "seedfree":
         # Reference: Liu et al. (2013), Front. Syst. Neurosci.
         data_all_fsel, sublabel_all_fsel = frameselection_wb(
@@ -264,8 +262,8 @@ for sp in [1, 2]:
     # - Delete variable to save space
     # -------------------------------------------
     del data_all, sublabel_all, data_all_fsel, sublabel_all_fsel
-    # if param.seed_type == "seedbased":
-    #     del seeddata_all
+    if param.seed_type == "seedbased":
+        del seeddata_all
 
     msg = "\n"
     logging.info(msg)
