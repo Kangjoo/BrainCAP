@@ -240,18 +240,22 @@ def load_groupdata_wb_daylabel(filein, param):
     logging.info(msg)    
     return data_all, sublabel_all, daylabel_all
 
-def concatenate_data(files, ndummy):
+def concatenate_data(files, ndummy, bold_type):
+    if "CIFTI" in bold_type:
+        image_header = nib.load(files[0]).header
+        im_axis = image_header.get_axis(0)
 
-    image_header = nib.load(files[0]).header
-    im_axis = image_header.get_axis(0)
+        images_data = np.vstack([nib.load(file).get_fdata()[ndummy:] for file in files])
 
-    images_data = np.vstack([nib.load(file).get_fdata()[ndummy:] for file in files])
-
-    ax_0 = nib.cifti2.SeriesAxis(start = im_axis.start, step = im_axis.step, size = images_data.shape[0]) 
-    ax_1 = image_header.get_axis(1)
-    new_h = nib.cifti2.Cifti2Header.from_axes((ax_0, ax_1))
-    conc_image = nib.Cifti2Image(images_data, new_h)
-    conc_image.update_headers()
+        ax_0 = nib.cifti2.SeriesAxis(start = im_axis.start, step = im_axis.step, size = images_data.shape[0]) 
+        ax_1 = image_header.get_axis(1)
+        new_h = nib.cifti2.Cifti2Header.from_axes((ax_0, ax_1))
+        conc_image = nib.Cifti2Image(images_data, new_h)
+        conc_image.update_headers()
+    elif "NIFTI" in bold_type:
+        images_data = np.vstack([nib.load(file).get_fdata()[:,:,:,ndummy:] for file in files])
+        #concatenate along time axis
+        conc_image = nib.funcs.concat_images(files,axis=3)
     return conc_image
 
 def concatenate_motion(motionpaths, ndummy):

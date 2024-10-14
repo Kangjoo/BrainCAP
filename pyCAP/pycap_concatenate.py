@@ -7,6 +7,7 @@ import nibabel as nib
 import logging
 import time
 import numpy as np
+import pycap_functions.pycap_exceptions as pe
 
 def dir_path(path):
     if os.path.isdir(path):
@@ -68,6 +69,38 @@ logging.info(f"Beginning bold concatenation for sessions in {args.sessions_list}
 
 for session in slist:
     logging.info(f"    Processing {session}")
+    #Check BOLD images are of compatible and same type
+    bold_type = None
+    for bold in bold_list:
+        if 'ptseries' in bold:
+            if bold_type == None:
+                bold_type = 'CIFTI (parcellated)'
+            elif bold_type != 'CIFTI (parcellated)':
+                raise pe.StepError(step="Concatenate Bolds", 
+                                   error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
+                                   action="Check specified BOLDs")
+            
+        elif 'dtseries' in bold:
+            if bold_type == None:
+                bold_type = 'CIFTI (dense)'
+            elif bold_type != 'CIFTI (dense)':
+                raise pe.StepError(step="Concatenate Bolds", 
+                                   error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
+                                   action="Check specified BOLDs")
+            
+        elif 'nii.gz' in bold:
+            if bold_type == None:
+                bold_type = 'NIFTI'
+            elif bold_type != 'NIFTI':
+                raise pe.StepError(step="Concatenate Bolds", 
+                                   error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
+                                   action="Check specified BOLDs")
+            
+        else:
+            raise pe.StepError(step="Concatenate Bolds", 
+                                error=f"Incompatible file {bold}",
+                                action="BOLDs must be of type CIFTI or NIFTI")
+
     bolds = [os.path.join(args.sessions_folder, session, bold) for bold in bold_list]
     bolds_string = '\t\t\n'.join(bolds)
     logging.info(f"        Searching for files:")
@@ -85,7 +118,7 @@ for session in slist:
         else:
             logging.info(f"           overwrite=no, skipping...")
     else:
-        conc = concatenate_data(bolds, args.ndummy)
+        conc = concatenate_data(bolds, args.ndummy, bold_type)
         nib.save(conc, conc_path)
         np.save(conc_path, conc.get_fdata().shape)
         logging.info(f"        File {conc_path} created!")
