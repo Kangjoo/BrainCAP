@@ -20,6 +20,7 @@ from scipy import stats
 from nilearn.masking import apply_mask
 import pycap_functions.pycap_exceptions as pe
 import h5py
+import pandas as pd
 # from memory_profiler import profile
 # @profile
 
@@ -174,9 +175,29 @@ def load_groupdata_motion(filein, param):
         # motion_data_filen = homedir + str(subID) + \
         #     "/images/functional/movement/bold" + str(n_run) + ".bstats"
         motion_data_filen = os.path.join(homedir, str(subID), filein.motion_file)
-        motion_dlist = np.genfromtxt(motion_data_filen, names=True)
-        idx = np.where(np.char.find(motion_dlist.dtype.names, motion_type) == 0)
-        motion_data_ind = np.genfromtxt(motion_data_filen, skip_header=1, usecols=idx[0])
+        #QuNex .bstats loading
+        if '.bstats' in motion_data_filen:
+            motion_dlist = np.genfromtxt(motion_data_filen, names=True)
+            idx = np.where(np.char.find(motion_dlist.dtype.names, motion_type) == 0)
+            motion_data_ind = np.genfromtxt(motion_data_filen, skip_header=1, usecols=idx[0])
+        #Other motion file loading (csv, tsv, or just line separated single column)
+        else:
+            if '.tsv' in motion_data_filen:
+                sep = '\t'
+            else:
+                sep = ','
+            try:
+                if motion_type:
+                    m_file = pd.read_csv(motion_data_filen, sep=sep)
+                    m_data_ind = m_file[motion_type].to_numpy()
+                else:
+                    m_file = pd.read_csv(motion_data_filen, header=None, sep=sep)
+                    m_data_ind = m_file.to_numpy()
+            except:
+                raise pe.StepError(step="PyCap prep - frameselection",
+                                   error=f'Failed to open motion file {motion_data_filen}',
+                                   action="Compatible with .bstats, .tsv, .csv, or line-seperated single column data." \
+                                    "If you have multiple columns, please specify 'motion_type'")
 
         # - Remove dummy time-frames
         #motion_data_run = np.delete(motion_data_run, range(n_dummy), 0)
