@@ -18,18 +18,23 @@ import logging
 import os
 from scipy import stats
 from nilearn.masking import apply_mask
+import pycap_functions.pycap_exceptions as pe
 import h5py
 # from memory_profiler import profile
 # @profile
 
 
-def load_norm_subject_wb(dataname, mask):
+def load_norm_subject_wb(dataname, mask, bold_type):
     # an individual (time points x space) matrix
     data = nib.load(dataname).get_fdata(dtype=np.float32)
-    if mask:
-        data = apply_mask(data, mask)
     zdata = stats.zscore(data, axis=0)  # Normalize each time-series
     del data
+    if mask:
+        if bold_type == "CIFTI":
+            zdata = apply_mask_cifti(zdata, mask)
+        else:
+            zdata = apply_mask(zdata, mask)
+
     return zdata
 
 
@@ -68,9 +73,12 @@ def load_groupdata_wb(filein, param):
             sdim = dshape[1]
         else:
             if sdim != dshape[1]:
-                exit() #ERROR
+                raise pe.StepError("PyCap Prep - load_groupdata",
+                                   f"Different number of features for subject {subID}",
+                                   "Compare this subject's data with other subjects")
 
     if mask_file != None:
+        logging.info(f"Mask {mask_file} supplied and will be used")
         #What different formats do masks come in?
         mask = nib.load(mask_file)
         #Output after masking will be where mask array == 1 or True, so can be used for dimension
@@ -84,7 +92,7 @@ def load_groupdata_wb(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
-        zdata = load_norm_subject_wb(dataname, mask)
+        zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
         subid_v = [idx] * zdata.shape[0]
@@ -250,7 +258,7 @@ def load_groupdata_wb_daylabel(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
-        zdata = load_norm_subject_wb(dataname, mask)
+        zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
         subid_v = [subID] * zdata.shape[0]
@@ -418,3 +426,10 @@ def load_groupdata_seed_usesaved(filein, param):
         msg = "Saved the average seed fMRI/label data in: " + filein.groupdata_seed_filen
         logging.info(msg)
     return seeddata_all
+
+def apply_mask_cifti(data, mask):
+    """
+    nilearn apply_mask is not compatible with CIFTI data so must be done manually
+    """
+    mask_array = mask.get_fdata()
+    return data[np.where(mask_array==1)]

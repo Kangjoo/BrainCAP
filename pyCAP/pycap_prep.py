@@ -86,6 +86,7 @@ parser.add_argument("--display_motion", type=str,
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
 parser.add_argument("--mask", default=None, help="Path to brain mask, recommended for dense data")
+parser.add_argument("--bold_type", default=None, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
 args = parser.parse_args()  # Read arguments from command line
 
 logging.basicConfig(level=logging.INFO,
@@ -125,14 +126,15 @@ if 'ptseries' in args.bold_path:
     param.unit = 'p'
 elif 'dtseries' in args.bold_path:
     param.unit = 'd'
+else:
+    param.unit = 'n'
 
 param.mask = args.mask
+if not args.bold_type:
+    param.bold_type = utils.get_bold_type(args.bold_path)
+else:
+    param.bold_type = args.bold_type
 
-# if param.unit == "d":
-#     param.sdim = 91282
-# elif param.unit == "p":
-#     param.sdim = 718
-# param.tdim = 4400
 param.subsplit_type = args.subsplit_type
 
 
