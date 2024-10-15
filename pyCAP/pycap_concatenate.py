@@ -88,7 +88,7 @@ for session in slist:
                                    error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
                                    action="Check specified BOLDs")
             
-        elif 'nii.gz' in bold:
+        elif '.nii' in bold:
             if bold_type == None:
                 bold_type = 'NIFTI'
             elif bold_type != 'NIFTI':
