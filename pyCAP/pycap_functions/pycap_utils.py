@@ -20,3 +20,14 @@ def _check_args(args, req_args):
         except:
             bad_args.append(arg)
     return bad_args
+
+def get_bold_type(bold):
+    """
+    Checks whether a bold is CIFTI or NIFTI
+    """
+    if "ptseries" in bold or "dtseries" in bold:
+        return "CIFTI"
+    elif "nii" in bold:
+        return "NIFTI"
+    else:
+        return None
