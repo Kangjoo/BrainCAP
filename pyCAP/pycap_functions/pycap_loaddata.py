@@ -17,14 +17,17 @@ import nibabel as nib
 import logging
 import os
 from scipy import stats
+from nilearn.masking import apply_mask
 import h5py
 # from memory_profiler import profile
 # @profile
 
 
-def load_norm_subject_wb(dataname):
+def load_norm_subject_wb(dataname, mask):
     # an individual (time points x space) matrix
     data = nib.load(dataname).get_fdata(dtype=np.float32)
+    if mask:
+        data = apply_mask(data, mask)
     zdata = stats.zscore(data, axis=0)  # Normalize each time-series
     del data
     return zdata
@@ -37,6 +40,7 @@ def load_groupdata_wb(filein, param):
     fname = filein.fname
     gsr = param.gsr
     unit = param.unit
+    mask_file = param.mask_file
     #sdim = param.sdim
     #tdim = param.tdim
 
@@ -58,6 +62,7 @@ def load_groupdata_wb(filein, param):
         #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
         else:
             dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
+            np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
         tdim += dshape[0]
         if sdim == 0:
             sdim = dshape[1]
@@ -65,13 +70,21 @@ def load_groupdata_wb(filein, param):
             if sdim != dshape[1]:
                 exit() #ERROR
 
+    if mask_file != None:
+        #What different formats do masks come in?
+        mask = nib.load(mask_file)
+        #Output after masking will be where mask array == 1 or True, so can be used for dimension
+        sdim = mask.get_fdata().sum()
+    else:
+        mask = None
+
     data_all = np.empty((tdim, sdim), dtype=np.float32)
     sublabel_all = np.empty((tdim, ), dtype=np.int32)
     ptr = 0
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
-        zdata = load_norm_subject_wb(dataname)
+        zdata = load_norm_subject_wb(dataname, mask)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
         subid_v = [idx] * zdata.shape[0]
@@ -194,14 +207,41 @@ def load_groupdata_wb_daylabel(filein, param):
     fname = filein.fname
     gsr = param.gsr
     unit = param.unit
-    sdim = param.sdim
-    tdim = param.tdim
+    mask_file = param.mask
 
     msg = "============================================"
     logging.info(msg)
     msg = "[whole-brain] Load " + unit + \
         "-level time-series data preprocessed with " + gsr + ".."
     logging.info(msg)
+
+    #set up dimensions for subject concatenated array
+    tdim = 0
+    sdim = 0
+    for idx, subID in enumerate(sublist):
+        # - Load fMRI data
+        dataname = os.path.join(homedir, str(subID), fname)
+        #If data was concatenated using pycap_concatenate, dimensions are saved
+        if os.path.exists(dataname + ".npy"):
+            dshape = np.load(dataname + ".npy")
+        #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
+        else:
+            dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
+            np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
+        tdim += dshape[0]
+        if sdim == 0:
+            sdim = dshape[1]
+        else:
+            if sdim != dshape[1]:
+                exit() #ERROR
+
+    if mask_file != None:
+        #What different formats do masks come in?
+        mask = nib.load(mask_file)
+        #Output after masking will be where mask array == 1 or True, so can be used for dimension
+        sdim = mask.get_fdata().sum()
+    else:
+        mask = None
 
     data_all = np.empty((len(sublist) * tdim, sdim), dtype=np.float32)
     sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
@@ -210,7 +250,7 @@ def load_groupdata_wb_daylabel(filein, param):
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
-        zdata = load_norm_subject_wb(dataname)
+        zdata = load_norm_subject_wb(dataname, mask)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
         subid_v = [subID] * zdata.shape[0]
