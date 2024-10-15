@@ -84,7 +84,8 @@ parser.add_argument("--display_motion", type=str,
                     help="Display motion parameter or not (y/n)")
 #parser.add_argument("-step", "--step", type=str, help="Step to run (step1 or step2)")
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
-parser.add_argument("-l", "--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
+parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
+parser.add_argument("--mask", default=None, help="Path to brain mask, recommended for dense data")
 args = parser.parse_args()  # Read arguments from command line
 
 logging.basicConfig(level=logging.INFO,
@@ -125,6 +126,7 @@ if 'ptseries' in args.bold_path:
 elif 'dtseries' in args.bold_path:
     param.unit = 'd'
 
+param.mask = args.mask
 
 # if param.unit == "d":
 #     param.sdim = 91282

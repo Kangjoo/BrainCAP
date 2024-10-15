@@ -68,7 +68,7 @@ parser.add_argument("--max_iter", type=int, default=1000, help="Max iterations f
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
 parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
 parser.add_argument("--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
-parser.add_argaument("--seed_name", type=str, help="Seed name")
+parser.add_argument("--seed_name", type=str, help="Seed name")
 parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
 parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
 parser.add_argument("--sessions_list", required=True,
@@ -82,7 +82,8 @@ parser.add_argument("--display_motion", type=str,
                     help="Display motion parameter or not (y/n)")
 #parser.add_argument("-step", "--step", type=str, help="Step to run (step1 or step2)")
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
-parser.add_argument("-l", "--log_path", default='./run_pycap.log', help='Path to output log', required=False)
+parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
+parser.add_argument("--mask", default=None, help="Brain mask, recommended for dense data")
 args = parser.parse_args()  # Read arguments from command line
 
 logging.basicConfig(level=logging.INFO,
@@ -123,6 +124,7 @@ if 'ptseries' in args.bold_path:
 elif 'dtseries' in args.bold_path:
     param.unit = 'd'
 
+param.mask = args.mask
 
 # if param.unit == "d":
 #     param.sdim = 91282
