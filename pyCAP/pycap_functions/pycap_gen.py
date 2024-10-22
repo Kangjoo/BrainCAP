@@ -19,6 +19,8 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import KMeans
+import sklearn.cluster
+import sklearn.mixture
 from scipy import stats
 import h5py
 import os
@@ -87,6 +89,76 @@ def clusterdata(inputdata, filein, param):
 
     return P, score
 
+def clusterdata_any(inputdata, filein, param):
+    """
+    Clusters data according to specified sklearn.cluster function, specified in param.cluster_args
+    Must include _method and _variable keys, defining the function and clustering variable.
+    Remaining keys must be valid keys for the specified function.aaaaa
+    """
+    outdir = filein.outpath
+    overwrite = param.overwrite
+
+    cluster_args = param.cluster_args.copy()
+    cluster_method = cluster_args.pop('_method', None)
+    c_var = cluster_args.pop('_variable', None)
+
+    P_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_flabel_cluster.csv")
+    score_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_silhouette_score.csv")
+
+    for file in [P_outfilen, score_outfilen]:
+        if os.path.exists(file):
+            logging.info(f"PyCap clustering file {file} found")
+            if overwrite == 'yes':
+                logging.info("    overwrite 'yes', existing file will be overwritten.")
+            else:
+                logging.info("    overwrite 'no', existing file will be saved. Set overwrite 'yes' to re-run.")
+                return None, None
+            
+    logging.info("============================================")
+    logging.info(f"Clustering method: {cluster_method}")
+    logging.info(f"    Running with {c_var}={cluster_args[c_var]}")
+
+    #attempt to load specified clustering method
+    try:
+        cluster_func = getattr(sklearn.cluster, cluster_method)
+    # except:
+    #     try:
+    #         cluster_func = getattr(sklearn.mixture, cluster_method)
+    except:
+        raise pe.StepError(step="PyCap Clustering",
+                            error=f"Incompatible clustering method {cluster_method}! " \
+                            "Only functions in sklearn.cluster and sklearn.mixture are compatible.",
+                            action=f"Check sklearn documentation for compatible functions.\nCheck sklearn.cluster.{cluster_method} exists.")
+    
+    #attempt to load specified parameters
+    try:
+        cluster_obj = cluster_func(**cluster_args).fit(inputdata)
+    except:
+        logging.info(f"FAILED ARGUMENT DICT: {cluster_args}")
+        raise pe.StepError(step="PyCap Clustering",
+                           error=f"Failed adding cluster parameters for {cluster_method}!",
+                           action="Check sklearn documentation for valid parameters.")
+    
+    P = cluster_obj.predict(inputdata)
+    score = silhouette_score(inputdata, cluster_obj.labels_)
+    score = np.atleast_1d(score)
+
+    # -----------------------------
+    #     save output files
+    # -----------------------------
+
+    
+    df = pd.DataFrame(data=P.astype(float))
+    df.to_csv(P_outfilen, sep=' ', header=False, float_format='%d', index=False)
+    msg = "Saved cluster labels corresponding to frames in " + P_outfilen
+    logging.info(msg)
+
+    
+    np.savetxt(score_outfilen, score)
+    msg = "Saved silhouette score in " + score_outfilen
+    logging.info(msg)
+    
+    return P, score
 
 def finalcluster2cap(inputdata, filein, param):
 
