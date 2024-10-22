@@ -63,8 +63,8 @@ parser.add_argument("--bold_path", type=local_path, help="Path to datafile insid
 parser.add_argument("--analysis_folder", type=dir_path, help="Output directory path")
 parser.add_argument("--split", type=int, default=1, help="Which split to run, default 1")
 #In wrapper script, derived from k range
-parser.add_argument("--n_k", type=int, help="Number of clusters for k-means clustering")
-parser.add_argument("--max_iter", type=int, default=1000, help="Max iterations for k-means clustering")
+parser.add_argument("--cluster_args", type=str, required=True, help="Args for sklearn clustering in form 'key1=val1,key2=val2'. " \
+                    "Must have key '_method', corresponding to a function in sklearn.clustering")
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
 parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
 parser.add_argument("--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
@@ -166,11 +166,12 @@ else:
 # param.n_dummy = args.ndummy
 # #param.run_order = list(args.runorder)
 
-# # - parameters for k-means clustering
-param.kmean_k = args.n_k
+# # - parameters for clustering
+param.cluster_args = utils.string2dict(args.cluster_args)
+#param.kmean_k = args.n_k
 # param.kmean_krange = [args.min_k, args.max_k]
-param.kmean_max_iter = args.max_iter
-param.kmean_kmethod = args.k_method
+#param.kmean_max_iter = args.max_iter
+#param.kmean_kmethod = args.k_method
 param.savecpimg = args.save_image
 
 
@@ -258,7 +259,7 @@ for sp in [1, 2]:
     msg = "    >> np.unique(sublabel_all_fsel) : " + str(np.unique(sublabel_all_fsel))
     logging.info(msg)
 
-    clusterdata(inputdata=data_all_fsel, filein=filein, param=param)
+    clusterdata_any(inputdata=data_all_fsel, filein=filein, param=param)
 
     # -------------------------------------------
     # - Delete variable to save space
