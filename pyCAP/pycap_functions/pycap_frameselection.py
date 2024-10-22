@@ -382,7 +382,7 @@ def frameselection_seed(inputdata, labeldata, seeddata, filein, param):
     labeldata_fsel_outfilen = os.path.join(outdir, "Framelabel_seed_subID.hdf5")
 
     if os.path.exists(labeldata_fsel_outfilen):
-        msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
+        msg = "File exists. Load concatenated fMRI/label data file: " + filein.labeldata_fsel_outfilen
         logging.info(msg)
 
         f = h5py.File(labeldata_fsel_outfilen, 'r')
