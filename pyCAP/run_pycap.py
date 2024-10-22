@@ -10,6 +10,8 @@ from pathlib import Path
 import argparse
 import pprint
 import yaml
+import pycap_functions.pycap_exceptions as pe
+from pycap_functions.pycap_utils import dict2string
 
 def file_path(path):
     """
@@ -69,7 +71,7 @@ arg_dict = {'required':
                  'prep':
                  ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path'],
                  'run':
-                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'n_k']
+                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'cluster_args']
                  }, 
             'optional':
                 {'concatenate_bolds':
@@ -77,7 +79,7 @@ arg_dict = {'required':
                  'prep':
                  ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type'],
                  'run':
-                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'k_method', 'max_iter', 'parc_file']
+                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'parc_file']
                  }
             }
 
@@ -163,11 +165,30 @@ for step in args['steps']:
 
     #compatible steps can make use of ntasks and jobs
     if step == "run":
-        min_k = step_args['k_range'][0]
-        ntasks = step_args['k_range'][-1] - min_k
-        jobs = step_args['n_splits']
-        del step_args['k_range'] #remove so not parsed later
-        del step_args['n_splits']
+        #Find the clusterig variable which will be defined as a list (or not at all)
+        #Used for parallelization, so can only be one such variable
+        var_key=None
+        for ckey, cval in step_args['cluster_args'].items():
+            if isinstance(cval, list):
+                if not var_key: 
+                    var_key = ckey
+                else:
+                    raise pe.StepError(step="PyCap Clustering Orchestration",
+                                       error="Only one variable can be defined as a list for parallelization!",
+                                       action=f"Check cluster_args keys, error caused by {var_key} and {ckey}")
+        if not var_key:
+            print("Only single parameter values supplied, not running within-split parallelization")        
+            step_args['_cvar'] = None
+            step_args['_cvarlist'] = None
+            ntasks = 1
+
+        else:
+            step_args['_cvar'] = var_key
+            step_args['cluster_args']['_variable'] = var_key
+            step_args['_cvarlist'] = step_args['cluster_args'].pop(var_key)
+            ntasks = len(step_args['_cvarlist'])
+        jobs = step_args.pop('n_splits')
+        #del step_args['n_splits']
     else:
         ntasks = 1
         jobs = 1
@@ -211,7 +232,7 @@ for step in args['steps']:
 
             #parameters that depend on task
             if step == "run":
-                step_args['n_k'] = min_k + task
+                step_args['cluster_args'][step_args['_cvar']] = step_args['_cvarlist'][task]
                 step_args['split'] = job + 1
 
 
@@ -222,16 +243,21 @@ for step in args['steps']:
 
             for arg in arg_dict['required'][step]:
                 if arg not in step_args.keys():
-                    print(f"ERROR! Missing required argument '{arg}' for {step}. Exiting...")
+                    print(f"ERROR! Missing required argument '{arg}' for PyCap '{step}'. Exiting...")
                     exit()
                 if type(step_args[arg]) == list:
-                    step_args[arg] = ','.join(step_args[arg])
-                command += f"--{arg} {step_args[arg]} "
+                    command += f"--{arg} {'|'.join(step_args[arg])} " 
+                elif type(step_args[arg]) == dict:
+                    command += f"--{arg} {dict2string(step_args[arg])} " 
+                else:
+                    command += f"--{arg} {step_args[arg]} "
 
             for arg in arg_dict['optional'][step]:
                 if arg in step_args.keys():
                     if type(step_args[arg]) == list:
-                        step_args[arg] = ','.join(step_args[arg])
+                        step_args[arg] = '|'.join(step_args[arg])
+                    elif type(step_args[arg]) == dict:
+                        step_args[arg] = dict2string(step_args[arg])
                     command += f"--{arg} {step_args[arg]} "
 
             if ntasks != 1 and sched_type == "SLURM":
