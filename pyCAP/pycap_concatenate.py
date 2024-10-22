@@ -8,6 +8,7 @@ import logging
 import time
 import numpy as np
 import pycap_functions.pycap_exceptions as pe
+import pycap_functions.pycap_utils as pu
 
 def dir_path(path):
     if os.path.isdir(path):
@@ -72,34 +73,10 @@ for session in slist:
     #Check BOLD images are of compatible and same type
     bold_type = None
     for bold in bold_list:
-        if 'ptseries' in bold:
-            if bold_type == None:
-                bold_type = 'CIFTI (parcellated)'
-            elif bold_type != 'CIFTI (parcellated)':
-                raise pe.StepError(step="Concatenate Bolds", 
-                                   error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
-                                   action="Check specified BOLDs")
-            
-        elif 'dtseries' in bold:
-            if bold_type == None:
-                bold_type = 'CIFTI (dense)'
-            elif bold_type != 'CIFTI (dense)':
-                raise pe.StepError(step="Concatenate Bolds", 
-                                   error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
-                                   action="Check specified BOLDs")
-            
-        elif '.nii' in bold:
-            if bold_type == None:
-                bold_type = 'NIFTI'
-            elif bold_type != 'NIFTI':
-                raise pe.StepError(step="Concatenate Bolds", 
-                                   error="BOLD type mismatch, for concatenation all BOLDS must be of same type",
-                                   action="Check specified BOLDs")
-            
-        else:
-            raise pe.StepError(step="Concatenate Bolds", 
-                                error=f"Incompatible file {bold}",
-                                action="BOLDs must be of type CIFTI or NIFTI")
+        if not bold_type:
+            bold_type = pu.get_bold_type(bold)
+        elif bold_type != pu.get_bold_type(bold):
+            raise pe.StepError()
 
     bolds = [os.path.join(args.sessions_folder, session, bold) for bold in bold_list]
     bolds_string = '\t\t\n'.join(bolds)
