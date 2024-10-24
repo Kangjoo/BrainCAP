@@ -42,8 +42,10 @@ def frameselection_wb(inputdata, labeldata, filein, param):
         logging.info(msg)
 
         f = h5py.File(labeldata_fsel_outfilen, 'r')
-        inputdata_fsel = f['inputdata_fsel']
-        labeldata_fsel = f['labeldata_fsel']
+        inputdata_fsel = np.array(f['inputdata_fsel'])
+
+        #np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
+        labeldata_fsel = np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
 
     else:
 
