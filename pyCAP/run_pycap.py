@@ -58,6 +58,9 @@ def convert_bool(arg_dict):
 
     return arg_dict
     
+#delimiter for lists in CLI strings
+list_delim = '|'
+
 #Main function
 
 timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
@@ -71,6 +74,8 @@ arg_dict = {'required':
                  'prep':
                  ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path'],
                  'run':
+                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'cluster_args'],
+                 'post':
                  ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'cluster_args']
                  }, 
             'optional':
@@ -79,6 +84,8 @@ arg_dict = {'required':
                  'prep':
                  ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type'],
                  'run':
+                 ['split','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'parc_file'],
+                 'post':
                  ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'parc_file']
                  }
             }
@@ -86,9 +93,10 @@ arg_dict = {'required':
 #Dict containing script paths for each step
 step_dict = {'concatenate_bolds':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_concatenate.py',
              'prep':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_prep.py',
-             'run':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_run.py'}
+             'run':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_run.py',
+             'post':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_post.py'}
 
-schedulers = ['NONE','SLURM','PBS']
+schedulers = ['NONE','SLURM']
 
 defaults = {"global":{'scheduler':{'type':"NONE"}, 'analysis_folder':'.'},
             "concatenate_bolds":{'overwrite':'no'}}
@@ -163,19 +171,24 @@ for step in args['steps']:
     if not os.path.exists(step_args['logs_folder']):
         os.makedirs(step_args['logs_folder'])
 
-    #compatible steps can make use of ntasks and jobs
-    if step == "run":
-        #Find the clusterig variable which will be defined as a list (or not at all)
-        #Used for parallelization, so can only be one such variable
-        var_key=None
+
+    var_key=None
+    if 'cluster_args' in step_args.keys():
+        if '_variable' in step_args['cluster_args'].keys(): var_key = step_args['cluster_args']['_variable']
         for ckey, cval in step_args['cluster_args'].items():
             if isinstance(cval, list):
                 if not var_key: 
                     var_key = ckey
-                else:
+                elif var_key != ckey:
                     raise pe.StepError(step="PyCap Clustering Orchestration",
-                                       error="Only one variable can be defined as a list for parallelization!",
-                                       action=f"Check cluster_args keys, error caused by {var_key} and {ckey}")
+                                        error="Only one variable can be defined as a list for parallelization!",
+                                        action=f"Check cluster_args keys, error caused by {var_key} and {ckey}")
+
+    #compatible steps can make use of ntasks and jobs
+    if step == "run":
+        #Find the clusterig variable which will be defined as a list (or not at all)
+        #Used for parallelization, so can only be one such variable
+        
         if not var_key:
             print("Only single parameter values supplied, not running within-split parallelization")        
             step_args['_cvar'] = None
@@ -196,12 +209,13 @@ for step in args['steps']:
 
     #job level, used for Ssplits
     for job in range(jobs):
+        split = job+1
         #Setup log path
-        step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{job}_{timestamp}.log')
+        step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_split{split}_{timestamp}.log')
         #Running as job directs output to it's own log, in which case better to use that for monitoring
         #Otherwise, commands and logs are launched at the 'task' level below
         if sched_type != "NONE":
-            sched_log = os.path.join(step_args['logs_folder'], f'{sched_type}_{step}_{job}_{timestamp}.log')
+            sched_log = os.path.join(step_args['logs_folder'], f'PyCap_{sched_type}_{step}_split{split}_{timestamp}.log')
             logs.append(sched_log)
         
         pp.pprint(step_args)
@@ -219,60 +233,56 @@ for step in args['steps']:
             command += f"#SBATCH --time={step_args['scheduler']['time']}\n"
             command += f"#SBATCH --output={sched_log}\n"
             command += f"#SBATCH --nodes=1\n"
-            command += f"#SBATCH --ntasks={ntasks}\n"
+            command += f"#SBATCH --ntasks=1\n"
+            
 
         elif sched_type.upper() == "PBS":
             pass
 
-        #task level, used for individual k-means runs
-        for task in range(ntasks):
+        if ntasks != 1:
+            task = "${PERM}"
+            step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_split{split}_{task}_{timestamp}.log')
 
-            if ntasks != 1:
-                step_args['log_path'] = os.path.join(step_args['logs_folder'], f'{step}_{job}_{task}_{timestamp}.log')
-
-            #parameters that depend on task
-            if step == "run":
-                step_args['cluster_args'][step_args['_cvar']] = step_args['_cvarlist'][task]
-                step_args['split'] = job + 1
-
-
-            if ntasks != 1 and sched_type == "SLURM":
-                command += f"srun --ntasks=1 python {step_dict[step]} "
-            else:
-                command += f"python {step_dict[step]} "
-
-            for arg in arg_dict['required'][step]:
-                if arg not in step_args.keys():
-                    print(f"ERROR! Missing required argument '{arg}' for PyCap '{step}'. Exiting...")
-                    exit()
-                if type(step_args[arg]) == list:
-                    command += f"--{arg} {'|'.join(step_args[arg])} " 
-                elif type(step_args[arg]) == dict:
-                    command += f"--{arg} {dict2string(step_args[arg])} " 
-                else:
-                    command += f"--{arg} {step_args[arg]} "
-
-            for arg in arg_dict['optional'][step]:
-                if arg in step_args.keys():
-                    if type(step_args[arg]) == list:
-                        step_args[arg] = '|'.join(step_args[arg])
-                    elif type(step_args[arg]) == dict:
-                        step_args[arg] = dict2string(step_args[arg])
-                    command += f"--{arg} {step_args[arg]} "
-
-            if ntasks != 1 and sched_type == "SLURM":
-                command += f"&\n"
+        #parameters that depend on task
+        if step == "run":
+            step_args['split'] = split
+            command += f"#SBATCH --array={','.join(map(str,step_args['_cvarlist']))}\n"
+            command += "PERM=${SLURM_ARRAY_TASK_ID} \n"
             
-            #commands launched at task level
-            if sched_type == "NONE":
-                commands.append(command)
-                logs.append(step_args['log_path'])
-                steps.append(step)
-                command = ""
+            step_args['cluster_args'][step_args['_cvar']] = "$PERM"
 
-        if ntasks != 1 and sched_type == "SLURM":
-            command += f"wait"
-        if sched_type != "NONE":
+
+
+        command += f"python {step_dict[step]} "
+
+        for arg in arg_dict['required'][step]:
+            if arg not in step_args.keys():
+                print(f"ERROR! Missing required argument '{arg}' for PyCap '{step}'. Exiting...")
+                exit()
+            if type(step_args[arg]) == list:
+                command += f'--{arg} "{list_delim.join(step_args[arg])}" ' 
+            elif type(step_args[arg]) == dict:
+                command += f'--{arg} {dict2string(step_args[arg])} ' 
+            else:
+                command += f'--{arg} "{step_args[arg]}" '
+
+        for arg in arg_dict['optional'][step]:
+            if arg in step_args.keys():
+                if type(step_args[arg]) == list:
+                    command += f'--{arg} "{list_delim.join(step_args[arg])}" ' 
+                elif type(step_args[arg]) == dict:
+                    command += f'--{arg} {dict2string(step_args[arg])} ' 
+                else:
+                    command += f'--{arg} "{step_args[arg]}" '
+
+        #commands launched at task level
+        if sched_type == "NONE":
+            commands.append(command)
+            logs.append(step_args['log_path'])
+            steps.append(step)
+            command = ""
+
+        else:
             commands.append(command)
             steps.append(step)
             
@@ -281,7 +291,7 @@ prev_ids = None
 new_ids = []
 prev_step = None
 #Run commands
-for command, log in zip(commands, logs):
+for command, log, step in zip(commands, logs, steps):
     serr = subprocess.STDOUT
     sout = subprocess.PIPE
     if sched_type.upper() == "NONE":
@@ -341,7 +351,7 @@ for command, log in zip(commands, logs):
         out = run.communicate()[0].decode("utf-8")
         run.stdin.close()
 
-        new_ids.append(out.split("Submitted batch job ")[1])
+        new_ids.append(out.split("Submitted batch job ")[1].replace('\n',''))
         prev_step = step
         print(f"Launched job {new_ids[-1]}")
         print("Follow command progress in:")
