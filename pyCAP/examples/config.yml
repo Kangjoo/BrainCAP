@@ -1,8 +1,9 @@
 global: #Parameters applicable to all steps, overwritten if specified in the step
   sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
-  analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/devtest/parc_test/"
+  analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/devtest/job_test/"
   sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/sublist/sessions5.list"
   logs_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/logs"
+  
 
 concatenate_bolds:
   bold_files: 
@@ -20,7 +21,7 @@ concatenate_bolds:
   overwrite: "yes"
   ndummy: 100
   scheduler:
-    type: NONE
+    type: SLURM
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
@@ -38,7 +39,7 @@ prep:
   display_motion: "no"
   overwrite: "yes"
   scheduler:
-    type: NONE
+    type: SLURM
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
@@ -49,19 +50,53 @@ run:
   scrubbing: "yes"
   gsr: "yes"
   bold_path: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
-  n_splits: 2
+  n_splits: 2 #Used to parse different jobs
   motion_type: fd
   motion_path: images/functional/bold2143_conc.bstats
   motion_threshold: 0.5
   display_motion: "no"
-  overwrite: "yesa"
+  overwrite: "yes"
   save_image: "no"
-  k_method: silhouette
-  k_range: [2, 5]
-  max_iter: 1000
-  parc_template: "/gpfs/gibbs/pi/n3/Studies/Connectome/Parcellations/CABNP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_ReorderedByNetworks_Zeroes.pscalar.nii"
+  # k_method: silhouette
+  # k_range: [2, 5] #Used to parse different jobs
+  # max_iter: 1000
+  cluster_args:
+    _method: KMeans
+    n_clusters: [2, 3, 4]
+    n_init: 10
+    max_iter: 1000
+  parc_file: "/gpfs/gibbs/pi/n3/Studies/Connectome/Parcellations/CABNP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_ReorderedByNetworks_Zeroes.pscalar.nii"
   scheduler:
-    type: NONE
+    type: SLURM
+    cpu_mem: 16G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+    time: "02:00:00"
+
+post:
+  scrubbing: "yes"
+  gsr: "yes"
+  bold_path: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  n_splits: 2 #Used to parse different jobs
+  motion_type: fd
+  motion_path: images/functional/bold2143_conc.bstats
+  motion_threshold: 0.5
+  display_motion: "no"
+  overwrite: "yes"
+  save_image: "no"
+  # k_method: silhouette
+  # k_range: [2, 5] #Used to parse different jobs
+  # max_iter: 1000
+  cluster_args:
+    _method: KMeans
+    n_clusters: [2, 3, 4]
+    n_init: 10
+    max_iter: 1000
+    _variable: n_clusters
+  parc_file: "/gpfs/gibbs/pi/n3/Studies/Connectome/Parcellations/CABNP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_ReorderedByNetworks_Zeroes.pscalar.nii"
+  scheduler:
+    type: SLURM
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
@@ -69,5 +104,12 @@ run:
     time: "02:00:00"
 
 
+
+# clustering:
+#   method: MiniBatchKMeans
+#   n_clusters: [2 3 4 5 6 7 8 9 10]
+#   n_init: 10
+#   max_iter: 1000
+#   batch_size: 1024
 
 
