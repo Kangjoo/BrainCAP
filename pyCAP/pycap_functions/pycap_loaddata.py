@@ -141,7 +141,7 @@ def load_groupdata_wb_usesaved(filein, param):
 
         msg = "Saved the concatenated fMRI/label data: " + filein.groupdata_wb_filen
         logging.info(msg)
-    return data_all, sublabel_all.astype(int)
+    return data_all, sublabel_all
 
 
 
