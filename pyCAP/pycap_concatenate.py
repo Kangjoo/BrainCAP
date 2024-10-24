@@ -57,11 +57,11 @@ time.sleep(1)
 
 slist = parse_slist(args.sessions_list)
 
-bold_list = args.bold_files.split(',')
+bold_list = args.bold_files.split('|')
 if args.motion_files is not None:
     logging.info("--motion_files supplied, will run motion concatenation")
     conc_motion = True
-    motion_list = args.motion_files.split(',')
+    motion_list = args.motion_files.split('|')
 else:
     logging.info("--motion_files not supplied, skipping motion concatenation")
     conc_motion = False
@@ -88,7 +88,7 @@ for session in slist:
         logging.info(f"           Warning: Existing concatenated bold file found")
         if args.overwrite.lower() == 'yes':
             logging.info(f"           overwrite=yes, overwriting...")
-            conc = concatenate_data(bolds, args.ndummy)
+            conc = concatenate_data(bolds, args.ndummy, bold_type)
             nib.save(conc, conc_path)
             np.save(conc_path, conc.get_fdata().shape)
             logging.info(f"        File {conc_path} created!")
