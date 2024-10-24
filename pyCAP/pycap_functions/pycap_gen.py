@@ -93,7 +93,7 @@ def clusterdata_any(inputdata, filein, param):
     """
     Clusters data according to specified sklearn.cluster function, specified in param.cluster_args
     Must include _method and _variable keys, defining the function and clustering variable.
-    Remaining keys must be valid keys for the specified function.aaaaa
+    Remaining keys must be valid keys for the specified function.
     """
     outdir = filein.outpath
     overwrite = param.overwrite
@@ -168,6 +168,8 @@ def finalcluster2cap(inputdata, filein, param):
     maxk = param.kmean_krange[1]+1  # plus 1 to match with python numpy indexing
     kmethod = param.kmean_kmethod
     max_iter = param.kmean_max_iter
+
+    
 
     msg = "============================================"
     logging.info(msg)
@@ -285,7 +287,117 @@ def finalcluster2cap(inputdata, filein, param):
 
     return P
 
+def finalcluster2cap_any(inputdata, filein, param):
 
+    outdir = filein.outpath
+    overwrite = param.overwrite
+    pscalar_filen = filein.pscalar_filen
+    mask_file = param.mask
+
+    cluster_args = param.cluster_args.copy()
+    cluster_method = cluster_args.pop('_method', None)
+    c_var = cluster_args.pop('_variable', None)
+
+    #P_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_flabel_cluster.csv")
+    score_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_silhouette_score.csv")
+
+    msg = "============================================"
+    logging.info(msg)
+    msg = f"[{cluster_method} clustering based CAP generation]"
+    logging.info(msg)
+
+    score_all = []
+    for c_val in cluster_args[c_var]:
+        score_outfilen = os.path.join(outdir, f"{cluster_method}_{c_val}_silhouette_score.csv")
+        score = np.genfromtxt(score_outfilen)
+        score_all.append(score)
+
+    kl = KneeLocator(cluster_args[c_var], score_all, curve="convex", direction="decreasing")
+    if not kl.elbow:
+        logging.info("WARNING: Unable to locate Knee! For best results, please use a wider range of values!")
+        logging.info("  KneeLocator failed, setting to largest value")
+        final_k = max(cluster_args[c_var])
+    else:
+        final_k = kl.elbow        
+        
+    msg = f"The tested {c_var} values are " + str(cluster_args[c_var])
+    logging.info(msg)
+    msg = "The estimated scores are " + str(score_all)
+    logging.info(msg)
+    msg = f"The optimal {c_var} is determined as " + str(final_k) + "."
+    logging.info(msg)
+
+    msg = f"Load the results from {cluster_method} clustering on the concatenated data matrix ({c_var} = " + str(final_k) + ").."
+    logging.info(msg)
+    P_outfilen = os.path.join(outdir, f"{cluster_method}_{final_k}_flabel_cluster.csv")
+    P = np.genfromtxt(P_outfilen, dtype=int)   
+    
+    # ------------------------------------------
+    # -   Average frames within each cluster
+    # ------------------------------------------
+    y = 0
+    clmean = np.empty([max(P)+1, inputdata.shape[1]])
+    for x in range(0, max(P)+1):
+        index = np.where(P == x)  # Find the indices of time-frames belonging to a cluster x
+        y = y+np.size(index)  # Progress: cumulated number of time-frames assigned to any cluster
+        msg = "cluster " + str(x) + ": averaging " + str(np.size(index)) + \
+            " frames in this cluster. (progress: " + str(y) + "/" + str(len(P)) + ")"
+        logging.info(msg)
+        cldata = inputdata[index, :]  # (n_time-points within cluster x space)
+        cluster_mean = cldata.mean(axis=1)  # (1 x space)
+        cluster_sed = stats.sem(cldata, axis=1)  # (1 x space)
+        cluster_z = cluster_mean / cluster_sed
+        clmean[x, :] = cluster_z
+        if param.savecapimg == "y":
+            # - Save the averaged image within this cluster
+            outfilen = outdir + "cluster" + str(x) + "_Zmap.pscalar.nii"
+            if overwrite != "yes" and os.path.exists(outfilen):
+                logging.info("Overwrite 'no' and file exists, will not save cap image")
+            else:
+                if pscalar_filen != None:
+                    template = nib.load(pscalar_filen)
+                elif mask_file != None:
+                    template = nib.load(mask_file)
+                else:
+                    template = None
+                if template != None:
+                    new_img = nib.Cifti2Image(cluster_z, header=template.header,
+                                            nifti_header=template.nifti_header)
+                    new_img.to_filename(outfilen)
+                    msg = "cluster " + str(x) + ": saved the average map in " + outfilen
+                    logging.info(msg)
+                else:
+                    logging.info("No Parcellation template or Mask file supplied, unable to save CAP image (Requires headers)")
+
+        elif param.savecapimg == "n":
+            msg = "cluster " + str(x) + ": do not save the average map."
+            logging.info(msg)
+
+    # -----------------------------
+    #     save output files
+    # -----------------------------
+
+    P_outfilen1 = outdir + f"FINAL_{c_var}_" + str(final_k) + "_framelabel_clusterID.hdf5"
+    f = h5py.File(P_outfilen1, "w")
+    dset1 = f.create_dataset(
+        "framecluster", (P.shape[0],), dtype='int', data=P)
+    f.close()
+
+    P_outfilen2 = outdir + f"FINAL_{c_var}_" + str(final_k) + "_clustermean.hdf5"
+    f = h5py.File(P_outfilen2, "w")
+    dset1 = f.create_dataset("clmean", (max(P)+1, inputdata.shape[1]), dtype='float32', data=clmean)
+    f.close()
+    msg = "Saved cluster mean data matrix in " + P_outfilen2
+    logging.info(msg)
+
+    # -----------------------------
+    #  delete intermediate files
+    # -----------------------------
+    # for k in range(mink, maxk):
+    #     score_outfilen = outdir + "kmeans_k" + str(k) + "_" + kmethod + "_score.csv"
+    #     os.remove(score_outfilen)
+
+    return P
 
 
 
