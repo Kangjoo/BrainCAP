@@ -99,7 +99,8 @@ console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
 
 logging.info("PyCap Prep Start")
-time.sleep(0.1)
+#Wait for a moment so run_pycap.py log tracking can keep up
+time.sleep(1)
 
 # -------------------------------------------
 #           Setup input parameters
@@ -129,7 +130,7 @@ elif 'dtseries' in args.bold_path:
 else:
     param.unit = 'n'
 
-param.mask = args.mask
+param.mask_file = args.mask
 if not args.bold_type:
     param.bold_type = utils.get_bold_type(args.bold_path)
 else:
