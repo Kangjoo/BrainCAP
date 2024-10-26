@@ -1,5 +1,6 @@
 import logging
 import pycap_functions.pycap_exceptions as pe
+import numpy as np
 
 def handle_args(args, req_args, step=None, param=None):
     bad_arg = _check_args(args, req_args)
@@ -81,3 +82,26 @@ def _string2type(val):
     elif val == 'True': val = True
     elif val == 'False': val = False
     return val
+
+def id2index(to_convert, sublistfull):
+    """
+    Convert subject ids to index of sublist. Used for h5py storage
+    """
+    converted = np.zeros(len(to_convert))
+    sublist = np.asarray(sublistfull)
+    to_convert = np.asarray(to_convert, dtype=str)
+    for i in range(len(converted)):
+        index = np.where(to_convert[i]==sublist)[0]
+        if len(index) != 1:
+            raise pe.StepError(step="Session list parsing",
+                               error=f"Found session {to_convert[i]} {len(index)} times in sessions list!",
+                               action="Session list and loaded data may not match, check your parameters")
+        converted[i] = index[0]
+    return converted
+
+def index2id(to_convert, sublistfull):
+    """
+    Convert sublist index to subject id
+    """
+    sublist = np.asarray(sublistfull)
+    return sublist[to_convert]
