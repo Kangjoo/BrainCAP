@@ -21,6 +21,7 @@ from nilearn.masking import apply_mask
 import pycap_functions.pycap_exceptions as pe
 import h5py
 import pandas as pd
+import pycap_functions.pycap_utils as utils
 # from memory_profiler import profile
 # @profile
 
@@ -96,7 +97,7 @@ def load_groupdata_wb(filein, param):
         zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
         # - Create subject label
-        subid_v = [idx] * zdata.shape[0]
+        subid_v = [subID] * zdata.shape[0]
         subid_v = np.array(subid_v)
         sublabel_all[ptr:ptr+zdata.shape[0], ] = subid_v
         # - Update/delete variables
@@ -125,7 +126,7 @@ def load_groupdata_wb_usesaved(filein, param):
 
         f = h5py.File(filein.groupdata_wb_filen, 'r')
         data_all = f['data_all']
-        sublabel_all = np.asarray([filein.sublist[idx] for idx in f['sublabel_all']])
+        sublabel_all = utils.index2id(np.array(f['sublabel_all']), filein.sublistfull)
 
     else:
         msg = "File does not exist. Load individual whole-brain fMRI data."
@@ -136,7 +137,7 @@ def load_groupdata_wb_usesaved(filein, param):
         dset1 = f.create_dataset(
             "data_all", (data_all.shape[0], data_all.shape[1]), dtype='float32', data=data_all)
         dset2 = f.create_dataset(
-            "sublabel_all", (sublabel_all.shape[0],), dtype='int', data=sublabel_all)
+            "sublabel_all", (sublabel_all.shape[0],), dtype='int', data=utils.id2index(sublabel_all, filein.sublistfull))
         f.close()
 
         msg = "Saved the concatenated fMRI/label data: " + filein.groupdata_wb_filen

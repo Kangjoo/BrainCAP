@@ -23,7 +23,7 @@ def subsplit(filein, param):
     msg = "[Model selection] Population split-half of subjects.."
     logging.info(msg)
 
-    filein.sublistfull = filein.sublist
+    filein.sublistfull = filein.sublistfull
     #splitdata_outfilen = filein.outdir + "subsplit_datalist.hdf5"
     splitdata_outfilen = os.path.join(filein.datadir, "subsplit_datalist.hdf5")
     msg = splitdata_outfilen
@@ -40,10 +40,10 @@ def subsplit(filein, param):
 
         test_sublist = []
         for index in test_sublist_idx:
-            test_sublist.append(filein.sublist[index])
+            test_sublist.append(filein.sublistfull[index])
         training_sublist = []
         for index in training_sublist_idx:
-            training_sublist.append(filein.sublist[index])
+            training_sublist.append(filein.sublistfull[index])
 
         msg = "(Split 1) Training data subjects " + \
             str(len(training_sublist)) + " : " + str(training_sublist)
@@ -54,7 +54,7 @@ def subsplit(filein, param):
 
     else:
         # generate list of subjects for training/test datasets
-        SubIdxlist = np.arange(0, len(filein.sublist))
+        SubIdxlist = np.arange(0, len(filein.sublistfull))
         spsize = math.floor(SubIdxlist.shape[0]/2)
         if param.subsplit_type == "random":
             ms_kwargs = {"train_size": spsize, "test_size": spsize}
@@ -64,11 +64,11 @@ def subsplit(filein, param):
             test_sublist_idx = test_sublist_idx.tolist()
             test_sublist = []
             for index in test_sublist_idx:
-                test_sublist.append(filein.sublist[index])
+                test_sublist.append(filein.sublistfull[index])
             training_sublist_idx = training_sublist_idx.tolist()
             training_sublist = []
             for index in training_sublist_idx:
-                training_sublist.append(filein.sublist[index])
+                training_sublist.append(filein.sublistfull[index])
 
 #         elif param.subsplit_type == "manual":
 #             training_sublist_idx = np.array(range(0, spsize, 1))

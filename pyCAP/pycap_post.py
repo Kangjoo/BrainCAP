@@ -191,7 +191,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublist = parse_slist(args.sessions_list)
+filein.sublistfull = parse_slist(args.sessions_list)
 filein.pscalar_filen = args.parc_file
 
 filein.fname = args.bold_path

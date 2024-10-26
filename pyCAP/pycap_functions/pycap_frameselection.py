@@ -17,6 +17,7 @@ import pandas as pd
 import logging
 import h5py
 from pycap_functions.pycap_loaddata import load_groupdata_motion
+import pycap_functions.pycap_utils as utils
 from memory_profiler import profile
 
 
@@ -45,7 +46,7 @@ def frameselection_wb(inputdata, labeldata, filein, param):
         inputdata_fsel = np.array(f['inputdata_fsel'])
 
         #np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
-        labeldata_fsel = np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
+        labeldata_fsel = utils.index2id(np.array(f['labeldata_fsel']), filein.sublistfull)
 
     else:
 
@@ -106,7 +107,7 @@ def frameselection_wb(inputdata, labeldata, filein, param):
         #if (param.kmean_k == param.kmean_krange[0]):
         f = h5py.File(labeldata_fsel_outfilen, "w")
         dset1 = f.create_dataset(
-            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=labeldata_fsel)
+            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel,filein.sublistfull))
         dset2 = f.create_dataset(
             "inputdata_fsel", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
         # dset1 = f.create_dataset(
@@ -389,7 +390,7 @@ def frameselection_seed(inputdata, labeldata, seeddata, filein, param):
 
         f = h5py.File(labeldata_fsel_outfilen, 'r')
         inputdata_fsel = f['inputdata_fsel']
-        labeldata_fsel = f['labeldata_fsel']
+        labeldata_fsel = utils.index2id(np.array(f['labeldata_fsel']), filein.sublistfull)
 
     else:
 
@@ -455,7 +456,7 @@ def frameselection_seed(inputdata, labeldata, seeddata, filein, param):
 
         f = h5py.File(labeldata_fsel_outfilen, "w")
         dset1 = f.create_dataset(
-            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=labeldata_fsel)
+            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel, filein.sublistfull))
         dset2 = f.create_dataset(
             "inputdata_fsel", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
         f.close()
