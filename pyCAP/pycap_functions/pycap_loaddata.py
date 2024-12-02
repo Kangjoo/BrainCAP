@@ -29,14 +29,16 @@ import pycap_functions.pycap_utils as utils
 def load_norm_subject_wb(dataname, mask, bold_type):
     # an individual (time points x space) matrix
     data = nib.load(dataname).get_fdata(dtype=np.float32)
+
+    if mask:
+        logging.info("Masking...")
+        if bold_type == "CIFTI":
+            data = apply_mask_cifti(data, mask)
+        else:
+            data = apply_mask(data, mask)
+
     zdata = stats.zscore(data, axis=0)  # Normalize each time-series
     del data
-    if mask:
-        if bold_type == "CIFTI":
-            zdata = apply_mask_cifti(zdata, mask)
-        else:
-            zdata = apply_mask(zdata, mask)
-
     return zdata
 
 
@@ -114,12 +116,46 @@ def load_groupdata_wb(filein, param):
     logging.info(msg)
     return data_all, sublabel_all
 
+def create_groupdata(filein, param):
+    """
+    Called by prep function, creates concatenated group data
+    """
+    filein.groupdata_wb_filen = os.path.join(filein.datadir, "concdata_" + param.spdatatag + ".hdf5")
+    if os.path.exists(filein.groupdata_wb_filen):
+        logging.info(f"File {filein.groupdata_wb_filen} exists. Overwrite '{param.overwrite}'")
+        if param.overwrite == "no":
+            logging.info("Loading...")
+            return load_groupdata(filein, param)
+        else:
+            logging.info("Removing existing data...")
+            os.remove(filein.groupdata_wb_filen)
+
+    msg = "Loading individual whole-brain fMRI data."
+    logging.info(msg)
+    data_all, sublabel_all = load_groupdata_wb(filein=filein, param=param)
+    logging.info("Load success!")
+    return data_all, sublabel_all
+
+def load_groupdata(filein, param):
+    filein.groupdata_wb_filen = os.path.join(filein.datadir, param.tag + param.spdatatag + ".hdf5")
+    try:
+        f = h5py.File(filein.groupdata_wb_filen, 'r')
+        data_all = np.array(f['data_all'])
+        sublabel_all = utils.index2id(np.array(f['sublabel_all']), filein.sublistfull)
+    except Exception as e:
+        logging.info(e)
+        raise pe.StepError(step="Load concatenated data",
+                           error="Cannot load data",
+                           action=f"Check prep_pycap outputs: {filein.datadir}")
+    logging.info(f"Data Shape: {data_all.shape}")
+    return data_all, sublabel_all
+
 
 def load_groupdata_wb_usesaved(filein, param):
     # filein.groupdata_wb_filen = filein.datadir + "hpc_groupdata_wb_" + \
     #     param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
-    filein.groupdata_wb_filen = os.path.join(filein.datadir,  "hpc_groupdata_wb_" + \
-        param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
+    filein.groupdata_wb_filen = os.path.join(filein.datadir,  "concdata" + \
+        "_" + param.spdatatag + ".hdf5")
     if os.path.exists(filein.groupdata_wb_filen):
         msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
         logging.info(msg)
@@ -197,7 +233,7 @@ def load_groupdata_motion(filein, param):
             except:
                 raise pe.StepError(step="PyCap prep - frameselection",
                                    error=f'Failed to open motion file {motion_data_filen}',
-                                   action="Compatible with .bstats, .tsv, .csv, or line-seperated single column data." \
+                                   action="Only compatible with .bstats, .tsv, .csv, or line-seperated single column data." \
                                     "If you have multiple columns, please specify 'motion_type'")
 
         # - Remove dummy time-frames
@@ -347,23 +383,46 @@ def concatenate_motion(motionpaths, ndummy):
 
 def parse_slist(sessionsfile):
     sessions=[]
-    with open(sessionsfile, 'r') as f:
-        sessionslist = f.read().splitlines()
-    for line in sessionslist:
-        elements = line.strip().split(':')
-        if len(elements) == 1:
-            sessions.append(elements[0].strip())
-        elif len(elements) == 2:
-            if elements[0] in ['subject id', 'session id']:
-                sessions.append(elements[1].strip())
-            else:
-                print(f"Incompatible key {elements[0]} in sessions list!")
-                raise
-        else:
-            print(f"Incompatible line {elements} in sessions list!")
-            raise
 
-    return sessions
+    if ".tsv" in sessionsfile:
+        sep = '\t'
+    else:
+        sep = ','
+
+    # #QuNex parsing
+    # if sep == ":":
+    #     with open(sessionsfile, 'r') as f:
+    #         sessionslist = f.read().splitlines()
+    #     for line in sessionslist:
+
+    #         elements = line.strip().split(':')
+    #         if len(elements) == 1:
+    #             sessions.append(elements[0].strip())
+    #         elif len(elements) == 2:
+    #             if elements[0] in ['subject id', 'session id']:
+    #                 sessions.append(elements[1].strip())
+    #             else:
+    #                 print(f"Incompatible key {elements[0]} in sessions list!")
+    #                 raise
+    #         else:
+    #             print(f"Incompatible line {elements} in sessions list!")
+    #             raise
+    #     groups = None
+    #Other parsing
+    s_df = pd.read_csv(sessionsfile, sep=sep)
+    if 'session_id' not in s_df.columns:
+        raise pe.StepError(step=f"Loading session file {sessionsfile}",
+                            error="Missing 'session_id' column",
+                            action="Ensure the session file is setup correctly, with session ids specified under 'session_id'")
+    sessions = s_df['session_id'].to_list()
+
+    if 'group' in s_df.columns:
+        groups = s_df['group'].to_list()
+    else:
+        logging.info("No group labels supplied")
+        groups = [None] * len(sessions)
+
+    return sessions, groups
 
 def load_norm_subject_seed(dataname, seedID):
     data = nib.load(dataname).get_fdata(dtype=np.float32)  # individual (time points x space) matrix
