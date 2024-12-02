@@ -16,16 +16,35 @@ import numpy as np
 import pandas as pd
 import logging
 import h5py
-from pycap_functions.pycap_loaddata import load_groupdata_motion
+from pycap_functions.pycap_loaddata import load_groupdata_motion, load_groupdata
+import pycap_functions.pycap_exceptions as pe
 import pycap_functions.pycap_utils as utils
+
 from memory_profiler import profile
 
-
-
-
-
 # @profile
-def frameselection_wb(inputdata, labeldata, filein, param):
+
+# def load_scrubbed(filein, param):
+#     labeldata_fsel_outfilen = os.path.join(filein.datadir, param.tag + "concdata_" + param.spdatatag + "_scrubbed" + ".hdf5")
+#     if os.path.exists(labeldata_fsel_outfilen):
+#         msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
+#         logging.info(msg)
+
+#         f = h5py.File(labeldata_fsel_outfilen, 'r')
+#         inputdata_fsel = np.array(f['inputdata_fsel'])
+
+#         #np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
+#         labeldata_fsel = utils.index2id(np.array(f['labeldata_fsel']), filein.sublistfull)
+    
+#     else:
+#         raise pe.StepError(step="Loading motion-selected data",
+#                            error=f"Failed to find data {labeldata_fsel_outfilen}",
+#                            action="Check prep_pycap outputs")
+        
+#     return inputdata_fsel, labeldata_fsel
+    
+
+def prep_scrubbed(inputdata, labeldata, filein, param):
     # inputdata: (concantenated time points x space) matrix of whole brain time-course
 
     outdir = filein.datadir
@@ -36,17 +55,10 @@ def frameselection_wb(inputdata, labeldata, filein, param):
     msg = "[Temporal frame selection]"
     logging.info(msg)
 
-    labeldata_fsel_outfilen = os.path.join(outdir, "Framelabel_subID.hdf5")
+    labeldata_fsel_outfilen = os.path.join(filein.datadir, param.tag + param.spdatatag + ".hdf5")
 
     if os.path.exists(labeldata_fsel_outfilen):
-        msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
-        logging.info(msg)
-
-        f = h5py.File(labeldata_fsel_outfilen, 'r')
-        inputdata_fsel = np.array(f['inputdata_fsel'])
-
-        #np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
-        labeldata_fsel = utils.index2id(np.array(f['labeldata_fsel']), filein.sublistfull)
+        inputdata_fsel, labeldata_fsel = load_groupdata(filein, param)
 
     else:
 
@@ -54,11 +66,8 @@ def frameselection_wb(inputdata, labeldata, filein, param):
         #   Select datapoints if split data
         # ------------------------------------------------------------------------
 
-        try:
+        if param.randTthreshold != 100:
             flag_sp = frameselection_Tsubsample(inputdata.shape[0], filein, param)
-        except:
-            msg = "No timepoints splitted."
-            logging.info(msg)
 
         # ------------------------------------------------------------------------
         #   Motion scrubbing
@@ -107,9 +116,9 @@ def frameselection_wb(inputdata, labeldata, filein, param):
         #if (param.kmean_k == param.kmean_krange[0]):
         f = h5py.File(labeldata_fsel_outfilen, "w")
         dset1 = f.create_dataset(
-            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel,filein.sublistfull))
+            "sublabel_all", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel,filein.sublistfull))
         dset2 = f.create_dataset(
-            "inputdata_fsel", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
+            "data_all", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
         # dset1 = f.create_dataset(
         #     "data_all", (data_all.shape[0], data_all.shape[1]), dtype='float32', data=data_all)
         f.close()
@@ -231,49 +240,49 @@ def motion_qc(filein, param):
 def frameselection_Tsubsample(allTdim, filein, param):
     # filein.Tsubsample_filen = filein.datadir + "Tsubsample_" + param.seedIDname + "_P" + \
     #     str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
-    filein.Tsubsample_filen = os.path.join(filein.datadir, "Tsubsample_" + param.seedIDname + "_P" + \
-        str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
-    if os.path.exists(filein.Tsubsample_filen):
-        msg = "File exists. Load the list of random temporal subsampling data file: " + filein.Tsubsample_filen
-        logging.info(msg)
+    # filein.Tsubsample_filen = os.path.join(filein.datadir, "Tsubsample_" + param.seedIDname + "_P" + \
+    #     str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
+    # if os.path.exists(filein.Tsubsample_filen):
+    #     msg = "File exists. Load the list of random temporal subsampling data file: " + filein.Tsubsample_filen
+    #     logging.info(msg)
 
-        f = h5py.File(filein.Tsubsample_filen, 'r')
-        flag_sp = f['flag_sp'][:]
+    #     f = h5py.File(filein.Tsubsample_filen, 'r')
+    #     flag_sp = f['flag_sp'][:]
 
-    else:
-        msg = "File does not exist. Generate random temporal subsampling."
-        logging.info(msg)
+    # else:
+    #     msg = "File does not exist. Generate random temporal subsampling."
+    #     logging.info(msg)
 
-        import random
-        arr = np.arange(0, allTdim, dtype=int)
-        tpsize = round(allTdim*param.randTthreshold/100)
-        splist = np.random.choice(arr, size=tpsize, replace=False)
-        splist.sort()
-        param.splist = splist.tolist()
-        msg = "Select " + str(param.randTthreshold) + \
-            " % random time-frames = " + str(len(param.splist))
-        logging.info(msg)
-        msg = str(param.splist)
-        logging.info(msg)
+    import random
+    arr = np.arange(0, allTdim, dtype=int)
+    tpsize = round(allTdim*param.randTthreshold/100)
+    splist = np.random.choice(arr, size=tpsize, replace=False)
+    splist.sort()
+    param.splist = splist.tolist()
+    msg = "Select " + str(param.randTthreshold) + \
+        " % random time-frames = " + str(len(param.splist))
+    logging.info(msg)
+    msg = str(param.splist)
+    logging.info(msg)
 
-        flag_sp = np.zeros(allTdim)
-        flag_sp[param.splist] = 1
-        # - QC
-        framenum_splitted = np.size(np.where(flag_sp == 1))
-        percent_splitted = (framenum_splitted) / np.shape(flag_sp)[0] * 100
-        msg = "split data: " + str(framenum_splitted) + "/" + str(np.shape(flag_sp)[0]) + \
-            " frame(s) (" + str(round(percent_splitted, 2)) + \
-            "% of total time-frames) selected."
-        logging.info(msg)
+    flag_sp = np.zeros(allTdim)
+    flag_sp[param.splist] = 1
+    # - QC
+    framenum_splitted = np.size(np.where(flag_sp == 1))
+    percent_splitted = (framenum_splitted) / np.shape(flag_sp)[0] * 100
+    msg = "split data: " + str(framenum_splitted) + "/" + str(np.shape(flag_sp)[0]) + \
+        " frame(s) (" + str(round(percent_splitted, 2)) + \
+        "% of total time-frames) selected."
+    logging.info(msg)
 
-        # - Save
-        f = h5py.File(filein.Tsubsample_filen, "w")
-        dset1 = f.create_dataset(
-            "flag_sp", (flag_sp.shape[0],), dtype='int', data=flag_sp)
-        f.close()
+    # - Save
+    f = h5py.File(filein.Tsubsample_filen, "w")
+    dset1 = f.create_dataset(
+        "flag_sp", (flag_sp.shape[0],), dtype='int', data=flag_sp)
+    f.close()
 
-        msg = "Saved the temporal subsampling data: " + filein.Tsubsample_filen
-        logging.info(msg)
+    msg = "Saved the temporal subsampling data: " + filein.Tsubsample_filen
+    logging.info(msg)
 
     return flag_sp
 
