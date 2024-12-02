@@ -39,7 +39,7 @@ plt.switch_backend('agg')
 
 def clusterdata(inputdata, filein, param):
 
-    outdir = filein.outpath
+    outdir = os.path.join(filein.outpath, 'cluster_results')
     k = param.kmean_k
     kmethod = param.kmean_kmethod
     max_iter = param.kmean_max_iter
@@ -82,7 +82,6 @@ def clusterdata(inputdata, filein, param):
     msg = "Saved cluster labels corresponding to frames in " + P_outfilen
     logging.info(msg)
 
-    
     np.savetxt(score_outfilen, score)
     msg = "Saved " + kmethod + " score in " + score_outfilen
     logging.info(msg)
@@ -95,15 +94,25 @@ def clusterdata_any(inputdata, filein, param):
     Must include _method and _variable keys, defining the function and clustering variable.
     Remaining keys must be valid keys for the specified function.
     """
-    outdir = filein.outpath
-    overwrite = param.overwrite
-
     cluster_args = param.cluster_args.copy()
     cluster_method = cluster_args.pop('_method', None)
     c_var = cluster_args.pop('_variable', None)
+    outdir = os.path.join(filein.outpath, cluster_method + "_runs_" + param.spdatatag)
+    overwrite = param.overwrite
 
-    P_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_flabel_cluster.csv")
-    score_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_silhouette_score.csv")
+    if not os.path.exists(outdir):
+        try:
+            os.makedirs(outdir)
+        except:
+            pass
+
+    #Won't work here due to multiprocessing
+    # elif overwrite == "clear":
+    #     os.remove(outdir)
+    #     os.makedirs(outdir)
+
+    P_outfilen = os.path.join(outdir, f"{param.tag}{c_var}_{cluster_args[c_var]}_flabel_cluster.csv")
+    score_outfilen = os.path.join(outdir, f"{param.tag}{c_var}_{cluster_args[c_var]}_silhouette_score.csv")
 
     for file in [P_outfilen, score_outfilen]:
         if os.path.exists(file):
@@ -152,13 +161,14 @@ def clusterdata_any(inputdata, filein, param):
     df.to_csv(P_outfilen, sep=' ', header=False, float_format='%d', index=False)
     msg = "Saved cluster labels corresponding to frames in " + P_outfilen
     logging.info(msg)
+    logging.info(P.shape)
 
     
     np.savetxt(score_outfilen, score)
     msg = "Saved silhouette score in " + score_outfilen
     logging.info(msg)
     
-    return P, score
+    return
 
 def finalcluster2cap(inputdata, filein, param):
 
@@ -289,7 +299,7 @@ def finalcluster2cap(inputdata, filein, param):
 
 def finalcluster2cap_any(inputdata, filein, param):
 
-    outdir = filein.outpath
+    
     overwrite = param.overwrite
     pscalar_filen = filein.pscalar_filen
     mask_file = param.mask
@@ -298,20 +308,33 @@ def finalcluster2cap_any(inputdata, filein, param):
     cluster_method = cluster_args.pop('_method', None)
     c_var = cluster_args.pop('_variable', None)
 
-    #P_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_flabel_cluster.csv")
-    score_outfilen = os.path.join(outdir, f"{cluster_method}_{cluster_args[c_var]}_silhouette_score.csv")
+    indir = os.path.join(filein.outpath, cluster_method + "_runs_" + param.spdatatag)
+    outdir = os.path.join(filein.outpath, cluster_method + "_results_" + param.spdatatag)
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
 
     msg = "============================================"
     logging.info(msg)
     msg = f"[{cluster_method} clustering based CAP generation]"
     logging.info(msg)
 
+    logging.info(f"Running with cluster variable: {c_var} and the following args:")
+    logging.info(cluster_args)
+
     score_all = []
     for c_val in cluster_args[c_var]:
-        score_outfilen = os.path.join(outdir, f"{cluster_method}_{c_val}_silhouette_score.csv")
+        score_outfilen = os.path.join(indir, f"{param.tag}{c_var}_{c_val}_silhouette_score.csv")
         score = np.genfromtxt(score_outfilen)
         score_all.append(score)
 
+    if score_all == []:
+        logging.info(f"Is this variable empty?: {cluster_args[c_var]}")
+        raise pe.StepError(step="post",
+                           error="Unable to locate scores due to bad clustering arguments",
+                           action="Check your clustering parameter")
+
+    logging.info(score_all)
     kl = KneeLocator(cluster_args[c_var], score_all, curve="convex", direction="decreasing")
     if not kl.elbow:
         logging.info("WARNING: Unable to locate Knee! For best results, please use a wider range of values!")
@@ -329,8 +352,10 @@ def finalcluster2cap_any(inputdata, filein, param):
 
     msg = f"Load the results from {cluster_method} clustering on the concatenated data matrix ({c_var} = " + str(final_k) + ").."
     logging.info(msg)
-    P_outfilen = os.path.join(outdir, f"{cluster_method}_{final_k}_flabel_cluster.csv")
+    P_outfilen = os.path.join(indir, f"{param.tag}{c_var}_{final_k}_flabel_cluster.csv")
     P = np.genfromtxt(P_outfilen, dtype=int)   
+    logging.info(inputdata.shape)
+    logging.info(P.shape)
     
     # ------------------------------------------
     # -   Average frames within each cluster
@@ -348,16 +373,18 @@ def finalcluster2cap_any(inputdata, filein, param):
         cluster_sed = stats.sem(cldata, axis=1)  # (1 x space)
         cluster_z = cluster_mean / cluster_sed
         clmean[x, :] = cluster_z
-        if param.savecapimg == "y":
+        if param.savecapimg == "yes":
             # - Save the averaged image within this cluster
-            outfilen = outdir + "cluster" + str(x) + "_Zmap.pscalar.nii"
+            
             if overwrite != "yes" and os.path.exists(outfilen):
                 logging.info("Overwrite 'no' and file exists, will not save cap image")
             else:
                 if pscalar_filen != None:
                     template = nib.load(pscalar_filen)
+                    outfilen = os.path.join(outdir, param.tag + "cluster" + str(x) + "_Zmap.pscalar.nii")
                 elif mask_file != None:
                     template = nib.load(mask_file)
+                    outfilen = os.path.join(outdir, param.tag +"cluster" + str(x) + "_Zmap.dscalar.nii")
                 else:
                     template = None
                 if template != None:
@@ -377,13 +404,13 @@ def finalcluster2cap_any(inputdata, filein, param):
     #     save output files
     # -----------------------------
 
-    P_outfilen1 = outdir + f"FINAL_{c_var}_" + str(final_k) + "_framelabel_clusterID.hdf5"
+    P_outfilen1 = os.path.join(outdir,f"{param.tag}_{c_var}_" + str(final_k) + "_framelabel_clusterID.hdf5")
     f = h5py.File(P_outfilen1, "w")
     dset1 = f.create_dataset(
         "framecluster", (P.shape[0],), dtype='int', data=P)
     f.close()
 
-    P_outfilen2 = outdir + f"FINAL_{c_var}_" + str(final_k) + "_clustermean.hdf5"
+    P_outfilen2 = os.path.join(outdir,f"{param.tag}_{c_var}_" + str(final_k) + "_clustermean.hdf5")
     f = h5py.File(P_outfilen2, "w")
     dset1 = f.create_dataset("clmean", (max(P)+1, inputdata.shape[1]), dtype='float32', data=clmean)
     f.close()
