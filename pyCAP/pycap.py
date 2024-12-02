@@ -5,6 +5,7 @@ import subprocess
 import os
 import time
 import logging
+import copy
 from datetime import datetime
 from pathlib import Path
 import argparse
@@ -67,33 +68,33 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
 pp = pprint.PrettyPrinter(indent=1)
 
 # #Dict containing required and optional parameters for each step, should exactly match the actual flags
-# #includes internally set params (like log_path)
+# #includes internally set params (like log_path and permutation)
 arg_dict = {'required':
                 {'concatenate_bolds':
                  ['sessions_list', 'sessions_folder', 'bold_files', 'bold_out', 'log_path'],
                  'prep':
-                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path'],
-                 'run':
-                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'cluster_args'],
+                 ['sessions_list','permutations','gsr','sessions_folder','bold_path','analysis_folder','log_path'],
+                 'clustering':
+                 ['sessions_list','sessions_folder','analysis_folder','log_path', 'cluster_args'],
                  'post':
-                 ['sessions_list','gsr','sessions_folder','bold_path','analysis_folder','log_path', 'cluster_args']
+                 ['sessions_list','permutations','sessions_folder','analysis_folder','log_path', 'cluster_args']
                  }, 
             'optional':
                 {'concatenate_bolds':
-                 ['overwrite', 'ndummy', 'motion_files', 'motion_out'],
+                 ['overwrite', 'ndummy', 'motion_files', 'motion_out','bold_type'],
                  'prep':
-                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type'],
-                 'run':
-                 ['split','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'parc_file'],
+                 ['tag','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','time_threshold','motion_threshold','overwrite', 'event_combine','event_type','bold_type','display_motion'],
+                 'clustering':
+                 ['tag','overwrite','permutation','bold_type'],
                  'post':
-                 ['n_splits','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','subsplit_type','time_threshold','motion_threshold','display_motion','overwrite', 'event_combine','event_type', 'save_image', 'parc_file']
+                 ['tag','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','permutation_type','time_threshold','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type']
                  }
             }
 
 #Dict containing script paths for each step
 step_dict = {'concatenate_bolds':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_concatenate.py',
              'prep':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_prep.py',
-             'run':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_run.py',
+             'clustering':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_clustering.py',
              'post':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_post.py'}
 
 schedulers = ['NONE','SLURM']
@@ -105,7 +106,7 @@ defaults = {"global":{'scheduler':{'type':"NONE"}, 'analysis_folder':'.'},
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=file_path, required=True, help="Path to config file with PyCap parameters")
 parser.add_argument("--steps", type=str, help="Comma seperated list of PyCap steps to run. Can also be specified in config")
-parser.add_argument("--debug", type=str, default="no", help="Debug")
+parser.add_argument("--dryrun", type=str, default="no", help="Dry-Run which will not actually launch steps")
 args = vars(parser.parse_args())
 
 with open(args['config'], 'r') as f:
@@ -164,7 +165,7 @@ steps = []
 #Setup commands and params for each step
 for step in args['steps']:
 
-    step_args = convert_bool(parsed_args[step])
+    step_args = convert_bool(copy.deepcopy(parsed_args[step]))
 
     if 'logs_folder' not in step_args.keys():
         step_args['logs_folder'] = os.path.join(step_args['analysis_folder'], 'logs')
@@ -185,12 +186,12 @@ for step in args['steps']:
                                         action=f"Check cluster_args keys, error caused by {var_key} and {ckey}")
 
     #compatible steps can make use of ntasks and jobs
-    if step == "run":
+    if step == "clustering":
         #Find the clusterig variable which will be defined as a list (or not at all)
         #Used for parallelization, so can only be one such variable
         
         if not var_key:
-            print("Only single parameter values supplied, not running within-split parallelization")        
+            print("Only single parameter values supplied, not running within-permutation parallelization")        
             step_args['_cvar'] = None
             step_args['_cvarlist'] = None
             ntasks = 1
@@ -200,23 +201,36 @@ for step in args['steps']:
             step_args['cluster_args']['_variable'] = var_key
             step_args['_cvarlist'] = step_args['cluster_args'].pop(var_key)
             ntasks = len(step_args['_cvarlist'])
-        jobs = step_args.pop('n_splits')
-        #del step_args['n_splits']
+        jobs = step_args.pop('permutations')
+        #del step_args['permutations']
     else:
         ntasks = 1
         jobs = 1
         min_k = None
 
-    #job level, used for Ssplits
+    #job level, used for permutations
     for job in range(jobs):
         split = job+1
         #Setup log path
-        step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_split{split}_{timestamp}.log')
         #Running as job directs output to it's own log, in which case better to use that for monitoring
         #Otherwise, commands and logs are launched at the 'task' level below
-        if sched_type != "NONE":
-            sched_log = os.path.join(step_args['logs_folder'], f'PyCap_{sched_type}_{step}_split{split}_{timestamp}.log')
-            logs.append(sched_log)
+        if jobs == 1:
+            step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_{timestamp}.log')
+            if sched_type != "NONE":
+                sched_log = os.path.join(step_args['logs_folder'], f'PyCap_{sched_type}_{step}_{timestamp}.log')
+                logs.append(sched_log)
+                job_name = f"{step}"
+        else:
+            step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_perm{split}_{timestamp}.log')
+            if sched_type != "NONE":
+                sched_log = os.path.join(step_args['logs_folder'], f'PyCap_{sched_type}_{step}_perm{split}_{timestamp}.log')
+                logs.append(sched_log)
+                job_name = f"{step}_perm{split}"
+
+
+        # if sched_type != "NONE":
+        #     sched_log = os.path.join(step_args['logs_folder'], f'PyCap_{sched_type}_{step}_perm{split}_{timestamp}.log')
+        #     logs.append(sched_log)
         
         pp.pprint(step_args)
 
@@ -226,12 +240,14 @@ for step in args['steps']:
 
         elif sched_type.upper() == "SLURM":
             command = "#!/bin/bash\n"
-            command += f"#SBATCH -J {step}\n"
+            command += f"#SBATCH -J {job_name}\n"
             command += f"#SBATCH --mem-per-cpu={step_args['scheduler']['cpu_mem']}\n"
             command += f"#SBATCH --cpus-per-task={step_args['scheduler']['cpus']}\n"
             command += f"#SBATCH --partition={step_args['scheduler']['partition']}\n"
             command += f"#SBATCH --time={step_args['scheduler']['time']}\n"
             command += f"#SBATCH --output={sched_log}\n"
+            if "account" in step_args['scheduler'].keys():
+                command += f"#SBATCH --account={step_args['scheduler']['account']}\n"
             command += f"#SBATCH --nodes=1\n"
             command += f"#SBATCH --ntasks=1\n"
             
@@ -241,11 +257,11 @@ for step in args['steps']:
 
         if ntasks != 1:
             task = "${PERM}"
-            step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_split{split}_{task}_{timestamp}.log')
+            step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_perm{split}_{task}_{timestamp}.log')
 
         #parameters that depend on task
-        if step == "run":
-            step_args['split'] = split
+        if step == "clustering":
+            step_args['permutation'] = split
             command += f"#SBATCH --array={','.join(map(str,step_args['_cvarlist']))}\n"
             command += "PERM=${SLURM_ARRAY_TASK_ID} \n"
             
@@ -295,7 +311,7 @@ for command, log, step in zip(commands, logs, steps):
     serr = subprocess.STDOUT
     sout = subprocess.PIPE
     if sched_type.upper() == "NONE":
-        if args['debug'] == "yes":
+        if args['dryrun'] == "yes":
             print(command)
             continue
 
@@ -339,7 +355,7 @@ for command, log, step in zip(commands, logs, steps):
         else:
             run_com = "sbatch"
 
-        if args['debug'] == "yes":
+        if args['dryrun'] == "yes":
             print(run_com)
             print(command)
             continue
