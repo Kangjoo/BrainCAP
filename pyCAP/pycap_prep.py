@@ -53,41 +53,35 @@ def local_path(path):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
-#parser.add_argument("-ci", "--savecapimg", type=str, help="Save CAP images or not (y/n)")
-parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
-parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both")
+parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)") #Seedbased
+parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both") #Seedbased
 parser.add_argument("--gsr", type=str, default="y", help="(y/n)")
 parser.add_argument("--sessions_folder", help="Home directory path")
 parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
 parser.add_argument("--analysis_folder", help="Output directory path")
-parser.add_argument("--n_splits", type=int, default=1, help="Number of splits to run, default 1")
-#parser.add_argument("-dd", "--datadir", type=dir_path, help="Concatenated Data directory path")
-#parser.add_argument("-k", "--ncluster", type=int, help="Number of clusters for k-means clustering")
-#parser.add_argument("-kl", "--mink", type=int, help="Miminum k for k-means clustering")
-#parser.add_argument("-ku", "--maxk", type=int, help="Maximum k for k-means clustering")
-#parser.add_argument("-ki", "--maxiter", type=int, help="Iterations for k-menas clustering")
+parser.add_argument("--permutations", type=int, default=1, help="Number of permutations to run, default 1")
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
 parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
-parser.add_argument("-s", "--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
-parser.add_argument("-si", "--seed_name", type=str, help="Seed name")
-parser.add_argument("-sp", "--seed_threshtype", type=str, help="(T/P)")
-parser.add_argument("-st", "--seed_threshold", type=float, help="Signal threshold")
+parser.add_argument("--seed_based", type=str, default="no", help="(yes/no), default 'no'")
+parser.add_argument("--seed_name", type=str, help="Seed name")
+parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
+parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
-parser.add_argument("--subsplit_type", default='random', type=str, help="random/days, default 'random'")
+#parser.add_argument("--permutation_type", default='random', type=str, help="random/days, default 'random'")
 parser.add_argument("--time_threshold", type=float, default=100, help="Random Time Signal threshold") #seedfree
-#parser.add_argument("-p", "--pscalarfilen", dest="pscalarfile", required=True,
-#                    help="Pscalar filename", type=lambda f: open(f))
-#parser.add_argument("-u", "--unit", type=str, help="(p/d)")  # parcel or dense
 parser.add_argument("--motion_threshold", type=float, help="Motion threshold")
 parser.add_argument("--display_motion", type=str,
                     help="Display motion parameter or not (y/n)")
-#parser.add_argument("-step", "--step", type=str, help="Step to run (step1 or step2)")
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
 parser.add_argument("--mask", default=None, help="Path to brain mask, recommended for dense data")
 parser.add_argument("--bold_type", default=None, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
+parser.add_argument("--tag", default="", help="Tag for saving files, useful for doing multiple analyses in the same folder (Optional).")
 args = parser.parse_args()  # Read arguments from command line
+
+if args.tag != "":
+    args.tag += "_"
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(message)s',
@@ -129,19 +123,20 @@ elif 'dtseries' in args.bold_path:
     param.unit = 'd'
 else:
     param.unit = 'n'
-
+param.tag = args.tag
 param.mask_file = args.mask
 if not args.bold_type:
     param.bold_type = utils.get_bold_type(args.bold_path)
 else:
     param.bold_type = args.bold_type
 
-param.subsplit_type = args.subsplit_type
+#param.randTthreshold = args.time_threshold
+#param.subsplit_type = args.permutation_type
 
 
 # - parameters for seed signal selection
-param.seed_type = args.seed_type
-if param.seed_type == "seedbased":
+param.seed_based = args.seed_based
+if param.seed_based == "yes":
     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
                       'Prep', '--seed_type=seedbased')
     param.seedIDname = args.seed_name
@@ -151,13 +146,12 @@ if param.seed_type == "seedbased":
     param.sig_thresholdtype = args.seed_threshtype
     param.sig_threshold = args.seed_threshold
 #Defaults
-elif param.seed_type == "seedfree":
-    param.seedIDname = param.seed_type
-    param.time_threshold = args.time_threshold
+else:
+    
     param.sig_thresholdtype = "P"
 
 param.overwrite = overwrite
-
+param.randTthreshold = args.time_threshold
 # # - parameters for motion scrubbing
 if args.scrubbing.lower() == "yes":
     utils.handle_args(args, ['scrubbing','motion_type','motion_threshold','display_motion'], 
@@ -196,17 +190,17 @@ filein.sublistfull = parse_slist(args.sessions_list)
 filein.fname = args.bold_path
 filein.motion_file = args.motion_path
 
-for split_i in range(args.n_splits):
+for split_i in range(args.permutations):
     #adjust to non-index count
     split = split_i + 1
 
-    split_dir = os.path.join(args.analysis_folder, f"Ssplit{split}")
+    split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
-    filein.outpath = os.path.join(split_dir, f"{param.gsr}_{param.seedIDname}", 
-                                    f"{param.sig_thresholdtype}{str(param.time_threshold)}/")
+    # filein.outpath = os.path.join(split_dir, f"{param.gsr}_{param.seedIDname}", 
+    #                                 f"{param.sig_thresholdtype}{str(param.time_threshold)}/")
 
-    filein.datadir = os.path.join(split_dir, f"{param.gsr}_{param.seedIDname}", 
-                                    f"{param.sig_thresholdtype}{str(param.time_threshold)}", "session_data/")
+    filein.outpath = split_dir
+    filein.datadir = os.path.join(split_dir, "data/")
     
     for path in [filein.outpath, filein.datadir]:
 
@@ -214,32 +208,23 @@ for split_i in range(args.n_splits):
             os.makedirs(path)
         except:
             logging.info(f"Output folder {path} already exists")
-            if overwrite:
-                logging.info(f"    Overwrite '{args.overwrite}', overwriting...")
-                shutil.rmtree(path)
-                os.makedirs(path)
-            else:
-                logging.info(f"    Overwrite '{args.overwrite}', script will halt!")
-                logging.info(f"    To re-run prep, use overwrite 'yes' or delete {path}")
-                logging.info(f"--- STEP COMPLETE ---")
-
 
     # -------------------------------------------
     # - Population split-half list of subjects
     # -------------------------------------------
 
-    test_sublist, training_sublist = subsplit(filein=filein, param=param)
+    split_2_sublist, split_1_sublist = subsplit(filein=filein, param=param)
 
     # -------------------------------------------
-    # - Run the whole process for training and test datasets
+    # - Run the whole process for split_1 and split_2 datasets
     # -------------------------------------------
     for sp in [1, 2]:
         if sp == 1:
-            param.spdatatag = "training_data"
-            filein.sublist = training_sublist
+            param.spdatatag = "split1"
+            filein.sublist = split_1_sublist
         elif sp == 2:
-            param.spdatatag = "test_data"
-            filein.sublist = test_sublist
+            param.spdatatag = "split2"
+            filein.sublist = split_2_sublist
 
         msg = "============================================"
         logging.info(msg)
@@ -258,23 +243,23 @@ for split_i in range(args.n_splits):
         # - Load a time by space data matrix from individual and temporally concatenate
         # -------------------------------------------
 
-        data_all, sublabel_all = load_groupdata_wb_usesaved(filein=filein, param=param)
-        msg = "    >> np.unique(sublabel_all) : " + str(np.unique(sublabel_all))
+        data_all, sublabel_all = create_groupdata(filein=filein, param=param)
+        msg = "    >> session ids : " + str(np.unique(sublabel_all))
         logging.info(msg)
 
         # -------------------------------------------
         # - Frame-selection to find the moments of activation
         # -------------------------------------------
 
-        if param.seed_type == "seedbased":
-            # Reference: Liu and Duyn (2013), PNAS
-            seeddata_all = load_groupdata_seed_usesaved(filein=filein, param=param)
-            data_all_fsel, sublabel_all_fsel = frameselection_seed(
-                inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
-        elif param.seed_type == "seedfree":
-            # Reference: Liu et al. (2013), Front. Syst. Neurosci.
-            data_all_fsel, sublabel_all_fsel = frameselection_wb(
-                inputdata=data_all, labeldata=sublabel_all, filein=filein, param=param)
+        # if param.seed_based == "yes":
+        #     # Reference: Liu and Duyn (2013), PNAS
+        #     seeddata_all = load_groupdata_seed_usesaved(filein=filein, param=param)
+        #     data_all_fsel, sublabel_all_fsel = frameselection_seed(
+        #         inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
+        # else:
+        #     # Reference: Liu et al. (2013), Front. Syst. Neurosci.
+        data_all_fsel, sublabel_all_fsel = prep_scrubbed(
+            inputdata=data_all, labeldata=sublabel_all, filein=filein, param=param)
 
         msg = "    >> np.unique(sublabel_all_fsel) : " + str(np.unique(sublabel_all_fsel))
         logging.info(msg)
@@ -283,8 +268,8 @@ for split_i in range(args.n_splits):
         # - Delete variable to save space
         # -------------------------------------------
         del data_all, sublabel_all, data_all_fsel, sublabel_all_fsel
-        if param.seed_type == "seedbased":
-            del seeddata_all
+        # if param.seed_based == "yes":
+        #     del seeddata_all
 
         msg = "\n"
         logging.info(msg)
