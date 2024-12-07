@@ -111,7 +111,7 @@ def get_seedtype(seed):
     """
     Checks whether seed is a mask file or list of indices and checks incompatibilites
     """
-    if seed.isinstance(list):
+    if isinstance(seed, list):
         for val in seed:
             seed_t = get_seedtype(val)
             if seed_t != "index":
@@ -120,10 +120,10 @@ def get_seedtype(seed):
                                    action="check parameters and documentation")
         seed_t = "list"
             
-    elif seed.isinstance(int):
+    elif isinstance(seed, int):
         seed_t = "index"
 
-    elif seed.isinstance(str):
+    elif isinstance(seed, str):
         if os.path.exists(seed):
             seed_t = "file"
         else:
