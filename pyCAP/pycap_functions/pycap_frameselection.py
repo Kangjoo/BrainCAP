@@ -44,16 +44,23 @@ from memory_profiler import profile
 #     return inputdata_fsel, labeldata_fsel
     
 
-def prep_scrubbed(inputdata, labeldata, filein, param):
+def prep_scrubbed(inputdata, labeldata, seeddata, filein, param):
     # inputdata: (concantenated time points x space) matrix of whole brain time-course
 
     outdir = filein.datadir
     sublist = filein.sublist
 
+    seed_args = param.seed_args
+    if not seed_args:
+        seed_based = None
+    else:
+        seed_based = seed_args['seed_based'].lower() == "yes"
+
     msg = "============================================"
     logging.info(msg)
     msg = "[Temporal frame selection]"
     logging.info(msg)
+    logging.info(f"Running with seed_based '{seed_based}'")
 
     labeldata_fsel_outfilen = os.path.join(filein.datadir, param.tag + param.spdatatag + ".hdf5")
 
@@ -75,17 +82,21 @@ def prep_scrubbed(inputdata, labeldata, filein, param):
 
         flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist, inputdata)
 
+        if seed_based:
+            flag_events_all = frameselection_seedactivation(seeddata, seed_args, param, sublist, labeldata)
+        else:
+            flag_events_all = np.ones_like(flag_scrubbed_all)
+
+
         # ------------------------------------------------------------------------
         #   Combine all frame flags (1: select, 0: remove)
         # ------------------------------------------------------------------------
-
         if 'flag_sp' in locals():
-            flag_comb = np.array((flag_scrubbed_all + flag_sp) > 1, dtype=int)
+            flag_comb = np.array((flag_scrubbed_all + flag_events_all + flag_sp) > 2, dtype=int)
         else:
-            flag_comb = np.array((flag_scrubbed_all) > 0, dtype=int)
+            flag_comb = np.array((flag_scrubbed_all + flag_events_all) > 1, dtype=int)
         flag_all = np.array(np.where(flag_comb == 1))
         flag_all_idx = flag_all.tolist()
-
         # - QC
         framenum_comb = np.size(flag_all_idx)
         percent_comb = (framenum_comb) / np.shape(flag_comb)[0] * 100
@@ -107,13 +118,6 @@ def prep_scrubbed(inputdata, labeldata, filein, param):
         #   Save output files
         # ------------------------------------------------------------------------
 
-        # labeldata_fsel_outfilen = outdir + "flabel_subID.csv"
-        # df = pd.DataFrame(data=labeldata_fsel.astype(float))
-        # df.to_csv(labeldata_fsel_outfilen, sep=' ', header=False, float_format='%d', index=False)
-
-
-        # if os.path.exists(labeldata_fsel_outfilen):
-        #if (param.kmean_k == param.kmean_krange[0]):
         f = h5py.File(labeldata_fsel_outfilen, "w")
         dset1 = f.create_dataset(
             "sublabel_all", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel,filein.sublistfull))
@@ -189,9 +193,6 @@ def frameselection_wb_daylabel(inputdata, daydata, filein, param):
     #   Save output files
     # ------------------------------------------------------------------------
 
-    # labeldata_fsel_outfilen = outdir + "flabel_subID.csv"
-    # df = pd.DataFrame(data=labeldata_fsel.astype(float))
-    # df.to_csv(labeldata_fsel_outfilen, sep=' ', header=False, float_format='%d', index=False)
     daydata_fsel_outfilen = os.path.join(outdir, "Framelabel_day.hdf5")
 
 
@@ -238,21 +239,6 @@ def motion_qc(filein, param):
 
 
 def frameselection_Tsubsample(allTdim, filein, param):
-    # filein.Tsubsample_filen = filein.datadir + "Tsubsample_" + param.seedIDname + "_P" + \
-    #     str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
-    # filein.Tsubsample_filen = os.path.join(filein.datadir, "Tsubsample_" + param.seedIDname + "_P" + \
-    #     str(param.randTthreshold) + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
-    # if os.path.exists(filein.Tsubsample_filen):
-    #     msg = "File exists. Load the list of random temporal subsampling data file: " + filein.Tsubsample_filen
-    #     logging.info(msg)
-
-    #     f = h5py.File(filein.Tsubsample_filen, 'r')
-    #     flag_sp = f['flag_sp'][:]
-
-    # else:
-    #     msg = "File does not exist. Generate random temporal subsampling."
-    #     logging.info(msg)
-
     import random
     arr = np.arange(0, allTdim, dtype=int)
     tpsize = round(allTdim*param.randTthreshold/100)
@@ -328,52 +314,47 @@ def frameselection_motion(filein, param, sublist, inputdata):
 
     return flag_scrubbed_all, motion_metric
 
-def frameselection_seedactivation(seeddata, filein, param, sublist):
-    seedID = param.seedID
-    eventcombine = param.eventcombine
-    eventtype = param.eventtype
-    sig_thresholdtype = param.sig_thresholdtype  # "T" "P"
-    sig_threshold = param.sig_threshold
+def frameselection_seedactivation(seeddata, seed_args, param, sublist, labeldata):
+    eventtype = seed_args['event_type']
+    sig_thresholdtype = seed_args['threshold_type']  # "T" "P"
+    sig_threshold = seed_args['threshold']
 
-    flag_events_all = np.array([])
-    if eventcombine == "average":
-        # --------------------------------------------------------------------
-        if sig_thresholdtype == "T":
-            msg = eventtype + " detection: find time-frames with seed " + str(seedID) + \
-                " signals above absolute threshold " + \
-                sig_thresholdtype + "=" + str(sig_threshold) + ".."
-            logging.info(msg)
-            # - Amplitude based thresholding for each individual
+    # Average
+    # --------------------------------------------------------------------
+    if sig_thresholdtype == "T":
+        msg = eventtype + " detection: find time-frames with seed " + str(seed_args['seed']) + \
+            " signals above absolute threshold " + \
+            sig_thresholdtype + "=" + str(sig_threshold) + ".."
+        logging.info(msg)
+        # - Amplitude based thresholding for each individual
+        # - Select frames with (de)activation (1: select, 0: remove)
+        if eventtype == "activation":
+            flag_events_all = np.array(seeddata > sig_threshold, dtype=int)
+        elif eventtype == "deactivation":
+            flag_events_all = np.array(seeddata < -sig_threshold, dtype=int)
+    # --------------------------------------------------------------------
+    elif sig_thresholdtype == "P":
+        flag_events_all = np.zeros_like(seeddata)
+        msg = eventtype + " detection: find time-frames with signals above percentage threshold " + \
+        sig_thresholdtype + "=" + str(sig_threshold) + "%.."
+        logging.info(msg)
+        #Thresholding based on the individual
+        for sub in sublist:
+            #get data indices belonging to the subject
+            indices = np.where(labeldata==sub)
+            sub_data = seeddata[indices]
+            P_tp = sub_data.shape[0] * sig_threshold/100  # number of time-samples to be selected
+
+            # - Percentage based thresholding for each individual
             # - Select frames with (de)activation (1: select, 0: remove)
-            for n_sub in range(0, len(sublist)):
-                inddata = seeddata[:, n_sub]
-                if eventtype == "activation":
-                    flag_events_ind = np.array(inddata > sig_threshold, dtype=int)
-                elif eventtype == "deactivation":
-                    flag_events_ind = np.array(inddata < -sig_threshold, dtype=int)
-                flag_events_all = np.concatenate((flag_events_all, flag_events_ind), axis=0)
-        # --------------------------------------------------------------------
-        elif sig_thresholdtype == "P":
-            P_tp = seeddata.shape[0] * sig_threshold/100  # number of time-samples to be selected
-            msg = eventtype + " detection: find time-frames with signals above percentage threshold " + \
-                sig_thresholdtype + "=" + str(sig_threshold) + "%.."
-            logging.info(msg)
-            # - Percentatge based thresholding for each individual
-            # - Select frames with (de)activation (1: select, 0: remove)
-            for n_sub in range(0, len(sublist)):
-                inddata = seeddata[:, n_sub]
-                if eventtype == "activation":
-                    Psort = np.flip(np.sort(inddata))  # sort in descending order
-                    flag_events_ind = np.array(inddata >= Psort[(int(P_tp))], dtype=int)
-                elif eventtype == "deactivation":
-                    Psort = np.sort(inddata)  # sort in ascending order
-                    flag_events_ind = np.array(inddata <= Psort[(int(P_tp))], dtype=int)
-                flag_events_all = np.concatenate((flag_events_all, flag_events_ind), axis=0)
-        # --------------------------------------------------------------------
-    elif eventcombine == "intersection":
-        flag_events_all = np.array([])  # needs to be updated
-    elif eventcombine == "union":
-        flag_events_all = np.array([])  # needs to be updated
+            if eventtype == "activation":
+                Psort = np.flip(np.sort(sub_data))  # sort in descending order
+                flag_events_all[indices] = np.array(sub_data >= Psort[(int(P_tp))], dtype=int)
+            elif eventtype == "deactivation":
+                Psort = np.sort(sub_data)  # sort in ascending order
+                flag_events_all[indices] = np.array(sub_data <= Psort[(int(P_tp))], dtype=int)
+    flag_events_all = flag_events_all.flatten()
+    # --------------------------------------------------------------------
 
     # - QC
     framenum_events = np.size(np.where(flag_events_all == 1))
@@ -382,98 +363,8 @@ def frameselection_seedactivation(seeddata, filein, param, sublist):
         round(percent_events, 2)) + "% of total time-frames) has(ve) signals above " + sig_thresholdtype + " threshold."
     logging.info(msg)
 
+    #raise
+
     return flag_events_all
-
-def frameselection_seed(inputdata, labeldata, seeddata, filein, param):
-    # inputdata: (concantenated time points x space) matrix of whole brain time-course
-    # seeddata: (time points x n_subject) matrix of mean seed time-course
-
-    outdir = filein.datadir
-    sublist = filein.sublist
-
-    labeldata_fsel_outfilen = os.path.join(outdir, "Framelabel_seed_subID.hdf5")
-
-    if os.path.exists(labeldata_fsel_outfilen):
-        msg = "File exists. Load concatenated fMRI/label data file: " + filein.labeldata_fsel_outfilen
-        logging.info(msg)
-
-        f = h5py.File(labeldata_fsel_outfilen, 'r')
-        inputdata_fsel = f['inputdata_fsel']
-        labeldata_fsel = utils.index2id(np.array(f['labeldata_fsel']), filein.sublistfull)
-
-    else:
-
-        msg = "============================================"
-        logging.info(msg)
-        msg = "[Spatial and temporal frame selection]"
-        logging.info(msg)
-
-        # ------------------------------------------------------------------------
-        #   Select datapoints if split data
-        # ------------------------------------------------------------------------
-
-        try:
-            flag_sp = frameselection_Tsubsample(inputdata.shape[0], filein, param)
-        except:
-            msg = "No timepoints splitted."
-            logging.info(msg)
-
-        # ------------------------------------------------------------------------
-        #   Motion scrubbing
-        # ------------------------------------------------------------------------
-
-        flag_scrubbed_all = frameselection_motion(filein, param, sublist)
-
-        # ------------------------------------------------------------------------
-        #   Activation above threshold in the seed region
-        # ------------------------------------------------------------------------
-
-        flag_events_all = frameselection_seedactivation(seeddata, filein, param, sublist)
-
-        # ------------------------------------------------------------------------
-        #   Combine scrubbed and signal-thresohlded flags (1: select, 0: remove)
-        # ------------------------------------------------------------------------
-
-        if 'flag_sp' in locals():
-            flag_comb = np.array((flag_scrubbed_all + flag_events_all + flag_sp) > 2, dtype=int)
-        else:
-            flag_comb = np.array((flag_scrubbed_all + flag_events_all) > 1, dtype=int)
-        flag_all = np.array(np.where(flag_comb == 1))
-        flag_all_idx = flag_all.tolist()
-
-        # - QC
-        framenum_comb = np.size(flag_all_idx)
-        percent_comb = (framenum_comb) / np.shape(flag_comb)[0] * 100
-        msg = "Combined frame selection: " + str(framenum_comb) + "/" + str(np.shape(flag_comb)[0]) + " frame(s) (" + str(
-            round(percent_comb, 2)) + "% of total time-frames) has(ve) been selected finally."
-        logging.info(msg)
-
-        # ------------------------------------------------------------------------
-        #   Final frame selection
-        # ------------------------------------------------------------------------
-
-        inputdata_fsel = inputdata[tuple(flag_all_idx)]
-        labeldata_fsel = labeldata[tuple(flag_all_idx)]
-        msg = ">> Output: a (" + str(inputdata_fsel.shape[0]) + " x " + str(
-            inputdata_fsel.shape[1]) + ") array of (selected time-frames x space)."
-        logging.info(msg)
-
-        # ------------------------------------------------------------------------
-        #   Save output files
-        # ------------------------------------------------------------------------
-
-
-        f = h5py.File(labeldata_fsel_outfilen, "w")
-        dset1 = f.create_dataset(
-            "labeldata_fsel", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel, filein.sublistfull))
-        dset2 = f.create_dataset(
-            "inputdata_fsel", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
-        f.close()
-
-        msg = "Saved subject labels corresponding to selected frames in " + labeldata_fsel_outfilen
-        logging.info(msg)
-
-    return inputdata_fsel, labeldata_fsel
-
 
 

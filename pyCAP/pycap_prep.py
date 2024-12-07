@@ -53,8 +53,6 @@ def local_path(path):
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
-parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)") #Seedbased
-parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both") #Seedbased
 parser.add_argument("--gsr", type=str, default="y", help="(y/n)")
 parser.add_argument("--sessions_folder", help="Home directory path")
 parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
@@ -62,14 +60,10 @@ parser.add_argument("--analysis_folder", help="Output directory path")
 parser.add_argument("--permutations", type=int, default=1, help="Number of permutations to run, default 1")
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
 parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
-parser.add_argument("--seed_based", type=str, default="no", help="(yes/no), default 'no'")
-parser.add_argument("--seed_name", type=str, help="Seed name")
-parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
-parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
+parser.add_argument("--seed_args", type=str, default=None, help="dict consisting of seed arguments")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
-#parser.add_argument("--permutation_type", default='random', type=str, help="random/days, default 'random'")
-parser.add_argument("--time_threshold", type=float, default=100, help="Random Time Signal threshold") #seedfree
+parser.add_argument("--time_threshold", type=float, default=100, help="Random Time Signal threshold")
 parser.add_argument("--motion_threshold", type=float, help="Motion threshold")
 parser.add_argument("--display_motion", type=str,
                     help="Display motion parameter or not (y/n)")
@@ -135,20 +129,25 @@ else:
 
 
 # - parameters for seed signal selection
-param.seed_based = args.seed_based
-if param.seed_based == "yes":
-    utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
-                      'Prep', '--seed_type=seedbased')
-    param.seedIDname = args.seed_name
-    param.seedID = eval(param.seedIDname)
-    param.event_combine = args.event_combine
-    param.eventtype = args.event_type
-    param.sig_thresholdtype = args.seed_threshtype
-    param.sig_threshold = args.seed_threshold
-#Defaults
-else:
+# param.seed_based = args.seed_based
+# if param.seed_based == "yes":
+#     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
+#                       'Prep', '--seed_type=seedbased')
+#     param.seedIDname = args.seed_name
+#     param.seedID = eval(param.seedIDname)
+#     param.event_combine = args.event_combine
+#     param.eventtype = args.event_type
+#     param.sig_thresholdtype = args.seed_threshtype
+#     param.sig_threshold = args.seed_threshold
+# #Defaults
+# else:
     
-    param.sig_thresholdtype = "P"
+#     param.sig_thresholdtype = "P"
+
+if not args.seed_args:
+    param.seed_args == None
+else:
+    param.seed_args = utils.string2dict(args.seed_args)
 
 param.overwrite = overwrite
 param.randTthreshold = args.time_threshold
@@ -184,7 +183,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublistfull = parse_slist(args.sessions_list)
+filein.sublistfull, filein.groups = parse_sfile(args.sessions_list)
 #filein.pscalar_filen = args.pscalarfile.name
 
 filein.fname = args.bold_path
@@ -243,7 +242,7 @@ for split_i in range(args.permutations):
         # - Load a time by space data matrix from individual and temporally concatenate
         # -------------------------------------------
 
-        data_all, sublabel_all = create_groupdata(filein=filein, param=param)
+        data_all, sublabel_all, seeddata_all = create_groupdata(filein=filein, param=param)
         msg = "    >> session ids : " + str(np.unique(sublabel_all))
         logging.info(msg)
 
@@ -259,7 +258,7 @@ for split_i in range(args.permutations):
         # else:
         #     # Reference: Liu et al. (2013), Front. Syst. Neurosci.
         data_all_fsel, sublabel_all_fsel = prep_scrubbed(
-            inputdata=data_all, labeldata=sublabel_all, filein=filein, param=param)
+            inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
 
         msg = "    >> np.unique(sublabel_all_fsel) : " + str(np.unique(sublabel_all_fsel))
         logging.info(msg)

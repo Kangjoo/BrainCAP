@@ -50,20 +50,26 @@ def load_groupdata_wb(filein, param):
     gsr = param.gsr
     unit = param.unit
     mask_file = param.mask_file
+    seed_args = param.seed_args
+    if not seed_args:
+        seed_based = None
+    else:
+        seed_based = seed_args['seed_based'].lower() == "yes"
+    #seed_based = param.seed_based.lower() == "yes"
     #sdim = param.sdim
     #tdim = param.tdim
 
     msg = "============================================"
     logging.info(msg)
-    msg = "[whole-brain] Load " + unit + \
+    msg = "Load " + unit + \
         "-level time-series data preprocessed with " + gsr + ".."
     logging.info(msg)
     
     #set up dimensions for subject concatenated array
     tdim = 0
     sdim = 0
+    info_list = []
     for idx, subID in enumerate(sublist):
-        # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
         #If data was concatenated using pycap_concatenate, dimensions are saved
         if os.path.exists(dataname + ".npy"):
@@ -80,24 +86,85 @@ def load_groupdata_wb(filein, param):
                 raise pe.StepError("PyCap Prep - load_groupdata",
                                    f"Different number of features for subject {subID}",
                                    "Compare this subject's data with other subjects")
+            
+        #Load info data for building and group and labeldata file
+        info_path = f"{dataname.split('.')[0]}_info.csv"
+        logging.info(info_path)
+        if os.path.exists(info_path):
+            logging.info(f"session info data found at: {info_path}, loading...")
+            info_list.append(pd.read_csv(info_path))
+
+    if info_list != []:
+        infodata_filen = os.path.join(filein.datadir, param.tag + param.spdatatag + "_info.csv")
+        if os.path.exists(infodata_filen):
+            if param.overwrite == "no":
+                logging.info("Info data found, overwrite 'no', will not overwrite")
+            else:
+                logging.info("Info data found, overwrite 'yes', will overwrite")
+                pd.concat(info_list).to_csv(infodata_filen, index=False)
+        else:
+            logging.info("Info data loaded successfuly, saving concatenated file...")
+            pd.concat(info_list).to_csv(infodata_filen, index=False)
+        del info_list
 
     if mask_file != None:
         logging.info(f"Mask {mask_file} supplied and will be used")
-        #What different formats do masks come in?
+        #Currently, masks must be an nibabel compatible file
         mask = nib.load(mask_file)
         #Output after masking will be where mask array == 1 or True, so can be used for dimension
         sdim = mask.get_fdata().sum()
     else:
         mask = None
 
+    if seed_based:
+        logging.info("Running seed_based analysis")
+        seed = seed_args['seed']
+        seed_t = utils.get_seedtype(seed)
+        seeddata_all = np.empty((tdim, 1), dtype=np.float32)
+        # if seed_t == "list": seed_dim = len(seed)
+        # elif seed_t == "index": seed_dim = 1
+        # #mask
+        # elif seed_t == "file":
+        #     seed = nib.load(seed)
+        #     seed_dim = seed.get_fdata().sum()
+        # seeddata_all = np.empty((tdim, seed_dim), dtype=np.float32)
+    else:
+        seeddata_all = None
+
     data_all = np.empty((tdim, sdim), dtype=np.float32)
-    sublabel_all = np.empty((tdim, ), dtype=np.int32)
+    sublabel_all = np.empty((tdim, ), dtype=np.object_)
     ptr = 0
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
-        zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
+        data = nib.load(dataname).get_fdata(dtype=np.float32)
+
+        if seed_based:
+            if seed_t == "file":
+                if param.bold_type == "CIFTI":
+                    seeddata = apply_mask_cifti(data, seed)
+                else:
+                    seeddata = apply_mask(data, seed)
+            elif seed_t == "index" or seed_t == "list":
+                seeddata = data[:, seed]
+            #average time-course
+            if seed_t != "index":
+                seeddata = np.average(seeddata,axis=1)
+            seeddata_all[ptr:ptr+seeddata.shape[0], :] = stats.zscore(seeddata, axis=0).reshape((-1,1))
+            del seeddata
+
+        if mask:
+            logging.info("Masking...")
+            if param.bold_type == "CIFTI":
+                data = apply_mask_cifti(data, mask)
+            else:
+                data = apply_mask(data, mask)
+
+        zdata = stats.zscore(data, axis=0)
+        #zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
+
+
         # - Create subject label
         subid_v = [subID] * zdata.shape[0]
         subid_v = np.array(subid_v)
@@ -114,13 +181,13 @@ def load_groupdata_wb(filein, param):
     msg = ">> Output: a (" + str(data_all.shape[0]) + " x " + \
         str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
     logging.info(msg)
-    return data_all, sublabel_all
+    return data_all, sublabel_all, seeddata_all
 
 def create_groupdata(filein, param):
     """
     Called by prep function, creates concatenated group data
     """
-    filein.groupdata_wb_filen = os.path.join(filein.datadir, "concdata_" + param.spdatatag + ".hdf5")
+    filein.groupdata_wb_filen = os.path.join(filein.datadir, param.tag + param.spdatatag + ".hdf5")
     if os.path.exists(filein.groupdata_wb_filen):
         logging.info(f"File {filein.groupdata_wb_filen} exists. Overwrite '{param.overwrite}'")
         if param.overwrite == "no":
@@ -132,9 +199,9 @@ def create_groupdata(filein, param):
 
     msg = "Loading individual whole-brain fMRI data."
     logging.info(msg)
-    data_all, sublabel_all = load_groupdata_wb(filein=filein, param=param)
+    data_all, sublabel_all, seeddata_all = load_groupdata_wb(filein=filein, param=param)
     logging.info("Load success!")
-    return data_all, sublabel_all
+    return data_all, sublabel_all, seeddata_all
 
 def load_groupdata(filein, param):
     filein.groupdata_wb_filen = os.path.join(filein.datadir, param.tag + param.spdatatag + ".hdf5")
@@ -147,40 +214,8 @@ def load_groupdata(filein, param):
         raise pe.StepError(step="Load concatenated data",
                            error="Cannot load data",
                            action=f"Check prep_pycap outputs: {filein.datadir}")
-    logging.info(f"Data Shape: {data_all.shape}")
+
     return data_all, sublabel_all
-
-
-def load_groupdata_wb_usesaved(filein, param):
-    # filein.groupdata_wb_filen = filein.datadir + "hpc_groupdata_wb_" + \
-    #     param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
-    filein.groupdata_wb_filen = os.path.join(filein.datadir,  "concdata" + \
-        "_" + param.spdatatag + ".hdf5")
-    if os.path.exists(filein.groupdata_wb_filen):
-        msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
-        logging.info(msg)
-
-        f = h5py.File(filein.groupdata_wb_filen, 'r')
-        data_all = f['data_all']
-        sublabel_all = utils.index2id(np.array(f['sublabel_all']), filein.sublistfull)
-
-    else:
-        msg = "File does not exist. Load individual whole-brain fMRI data."
-        logging.info(msg)
-
-        data_all, sublabel_all = load_groupdata_wb(filein=filein, param=param)
-        f = h5py.File(filein.groupdata_wb_filen, "w")
-        dset1 = f.create_dataset(
-            "data_all", (data_all.shape[0], data_all.shape[1]), dtype='float32', data=data_all)
-        dset2 = f.create_dataset(
-            "sublabel_all", (sublabel_all.shape[0],), dtype='int', data=utils.id2index(sublabel_all, filein.sublistfull))
-        f.close()
-
-        msg = "Saved the concatenated fMRI/label data: " + filein.groupdata_wb_filen
-        logging.info(msg)
-    return data_all, sublabel_all
-
-
 
 def load_groupdata_motion(filein, param):
     # load motion parameters estimated using QuNex
@@ -267,102 +302,113 @@ def load_groupdata_motion(filein, param):
 
 
 
-def load_groupdata_wb_daylabel(filein, param):
-    homedir = filein.sessions_folder
-    sublist = filein.sublist
-    fname = filein.fname
-    gsr = param.gsr
-    unit = param.unit
-    mask_file = param.mask
+# def load_groupdata_wb_daylabel(filein, param):
+#     homedir = filein.sessions_folder
+#     sublist = filein.sublist
+#     fname = filein.fname
+#     gsr = param.gsr
+#     unit = param.unit
+#     mask_file = param.mask
 
-    msg = "============================================"
-    logging.info(msg)
-    msg = "[whole-brain] Load " + unit + \
-        "-level time-series data preprocessed with " + gsr + ".."
-    logging.info(msg)
+#     msg = "============================================"
+#     logging.info(msg)
+#     msg = "[whole-brain] Load " + unit + \
+#         "-level time-series data preprocessed with " + gsr + ".."
+#     logging.info(msg)
 
-    #set up dimensions for subject concatenated array
-    tdim = 0
-    sdim = 0
-    for idx, subID in enumerate(sublist):
-        # - Load fMRI data
-        dataname = os.path.join(homedir, str(subID), fname)
-        #If data was concatenated using pycap_concatenate, dimensions are saved
-        if os.path.exists(dataname + ".npy"):
-            dshape = np.load(dataname + ".npy")
-        #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
-        else:
-            dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
-            np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
-        tdim += dshape[0]
-        if sdim == 0:
-            sdim = dshape[1]
-        else:
-            if sdim != dshape[1]:
-                exit() #ERROR
+#     #set up dimensions for subject concatenated array
+#     tdim = 0
+#     sdim = 0
+#     for idx, subID in enumerate(sublist):
+#         # - Load fMRI data
+#         dataname = os.path.join(homedir, str(subID), fname)
+#         #If data was concatenated using pycap_concatenate, dimensions are saved
+#         if os.path.exists(dataname + ".npy"):
+#             dshape = np.load(dataname + ".npy")
+#         #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
+#         else:
+#             dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
+#             np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
+#         tdim += dshape[0]
+#         if sdim == 0:
+#             sdim = dshape[1]
+#         else:
+#             if sdim != dshape[1]:
+#                 exit() #ERROR
 
-    if mask_file != None:
-        #What different formats do masks come in?
-        mask = nib.load(mask_file)
-        #Output after masking will be where mask array == 1 or True, so can be used for dimension
-        sdim = mask.get_fdata().sum()
-    else:
-        mask = None
+#     if mask_file != None:
+#         #What different formats do masks come in?
+#         mask = nib.load(mask_file)
+#         #Output after masking will be where mask array == 1 or True, so can be used for dimension
+#         sdim = mask.get_fdata().sum()
+#     else:
+#         mask = None
 
-    data_all = np.empty((len(sublist) * tdim, sdim), dtype=np.float32)
-    sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
-    daylabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
-    ptr = 0
-    for idx, subID in enumerate(sublist):
-        # - Load fMRI data
-        dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
-        zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
-        data_all[ptr:ptr+zdata.shape[0], :] = zdata
-        # - Create subject label
-        subid_v = [subID] * zdata.shape[0]
-        subid_v = np.array(subid_v)
-        sublabel_all[ptr:ptr+zdata.shape[0], ] = subid_v
-        # - Creat day label
-        day_v = np.empty(zdata.shape[0]); day_v.fill(1)
-        runlen=int(zdata.shape[0]/2)
-        day_v[runlen:] = 2 
-        daylabel_all[ptr:ptr+zdata.shape[0], ] = day_v
-        # - Update/delete variables
-        ptr += zdata.shape[0]
+#     data_all = np.empty((len(sublist) * tdim, sdim), dtype=np.float32)
+#     sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
+#     daylabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
+#     ptr = 0
+#     for idx, subID in enumerate(sublist):
+#         # - Load fMRI data
+#         dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
+#         zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
+#         data_all[ptr:ptr+zdata.shape[0], :] = zdata
+#         # - Create subject label
+#         subid_v = [subID] * zdata.shape[0]
+#         subid_v = np.array(subid_v)
+#         sublabel_all[ptr:ptr+zdata.shape[0], ] = subid_v
+#         # - Creat day label
+#         day_v = np.empty(zdata.shape[0]); day_v.fill(1)
+#         runlen=int(zdata.shape[0]/2)
+#         day_v[runlen:] = 2 
+#         daylabel_all[ptr:ptr+zdata.shape[0], ] = day_v
+#         # - Update/delete variables
+#         ptr += zdata.shape[0]
 
-        msg = "(Subject " + str(idx) + ")" + dataname + " " + \
-            ", data:" + str(zdata.shape) + ", subject label:" + str(subid_v.shape) + \
-            ", day label:" + str(day_v.shape)
-        logging.info(msg)
+#         msg = "(Subject " + str(idx) + ")" + dataname + " " + \
+#             ", data:" + str(zdata.shape) + ", subject label:" + str(subid_v.shape) + \
+#             ", day label:" + str(day_v.shape)
+#         logging.info(msg)
 
-        del zdata, subid_v
+#         del zdata, subid_v
 
-    msg = ">> Output 1: a (" + str(data_all.shape[0]) + " x " + \
-        str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
-    logging.info(msg)
-    msg = ">> Output 2: a " + str(sublabel_all.shape) + " array of (group concatenated subject label)."
-    logging.info(msg)
-    msg = ">> Output 3: a " + str(daylabel_all.shape[0]) + " array of (group concatenated day label)."
-    logging.info(msg)    
-    return data_all, sublabel_all, daylabel_all
+#     msg = ">> Output 1: a (" + str(data_all.shape[0]) + " x " + \
+#         str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
+#     logging.info(msg)
+#     msg = ">> Output 2: a " + str(sublabel_all.shape) + " array of (group concatenated subject label)."
+#     logging.info(msg)
+#     msg = ">> Output 3: a " + str(daylabel_all.shape[0]) + " array of (group concatenated day label)."
+#     logging.info(msg)    
+#     return data_all, sublabel_all, daylabel_all
 
-def concatenate_data(files, ndummy, bold_type):
+def concatenate_data(files, ndummy, bold_type, bold_labels):
+    im_list = []
+    conc_labels = []
+
     if "CIFTI" == bold_type:
         image_header = nib.load(files[0]).header
         im_axis = image_header.get_axis(0)
-
-        images_data = np.vstack([nib.load(file).get_fdata()[ndummy:] for file in files])
-
+        for file, label in zip(files, bold_labels):
+            fdata = nib.load(file).get_fdata()[ndummy:]
+            im_list.append(fdata)
+            conc_labels += [label]*fdata.shape[0]
+        #images_data = np.vstack([nib.load(file).get_fdata()[ndummy:] for file in files])
+        images_data = np.vstack(im_list)
         ax_0 = nib.cifti2.SeriesAxis(start = im_axis.start, step = im_axis.step, size = images_data.shape[0]) 
         ax_1 = image_header.get_axis(1)
         new_h = nib.cifti2.Cifti2Header.from_axes((ax_0, ax_1))
         conc_image = nib.Cifti2Image(images_data, new_h)
         conc_image.update_headers()
     elif "NIFTI" == bold_type:
-        images_data = np.vstack([nib.load(file).get_fdata()[:,:,:,ndummy:] for file in files])
+        for file, label in zip(files, bold_labels):
+            fdata = nib.load(file).get_fdata()[:,:,:,ndummy:]
+            im_list.append(fdata)
+            conc_labels += [label]*fdata.shape[0]
+        images_data = np.vstack(im_list)
         #concatenate along time axis
         conc_image = nib.funcs.concat_images(files,axis=3)
-    return conc_image
+
+    return conc_image, conc_labels
 
 def concatenate_motion(motionpaths, ndummy):
     motion_conc = []
@@ -382,46 +428,49 @@ def concatenate_motion(motionpaths, ndummy):
     return motion_conc
 
 def parse_slist(sessionsfile):
+    #QuNex sessions list parsing
     sessions=[]
 
-    if ".tsv" in sessionsfile:
+    with open(sessionsfile, 'r') as f:
+        sessionslist = f.read().splitlines()
+    for line in sessionslist:
+
+        elements = line.strip().split(':')
+        if len(elements) == 1:
+            sessions.append(elements[0].strip())
+        elif len(elements) == 2:
+            if elements[0] in ['subject id', 'session id']:
+                sessions.append(elements[1].strip())
+            else:
+                print(f"Incompatible key {elements[0]} in sessions list!")
+                raise
+        else:
+            print(f"Incompatible line {elements} in sessions list!")
+            raise
+
+    return sessions
+
+def parse_sfile(sessionsfile):
+    groups = None
+    #Other parsing
+    if '.tsv' in sessionsfile:
         sep = '\t'
     else:
         sep = ','
-
-    # #QuNex parsing
-    # if sep == ":":
-    #     with open(sessionsfile, 'r') as f:
-    #         sessionslist = f.read().splitlines()
-    #     for line in sessionslist:
-
-    #         elements = line.strip().split(':')
-    #         if len(elements) == 1:
-    #             sessions.append(elements[0].strip())
-    #         elif len(elements) == 2:
-    #             if elements[0] in ['subject id', 'session id']:
-    #                 sessions.append(elements[1].strip())
-    #             else:
-    #                 print(f"Incompatible key {elements[0]} in sessions list!")
-    #                 raise
-    #         else:
-    #             print(f"Incompatible line {elements} in sessions list!")
-    #             raise
-    #     groups = None
-    #Other parsing
     s_df = pd.read_csv(sessionsfile, sep=sep)
+
     if 'session_id' not in s_df.columns:
         raise pe.StepError(step=f"Loading session file {sessionsfile}",
                             error="Missing 'session_id' column",
                             action="Ensure the session file is setup correctly, with session ids specified under 'session_id'")
-    sessions = s_df['session_id'].to_list()
+    sessions = s_df['session_id'].astype(str).to_list()
 
     if 'group' in s_df.columns:
         groups = s_df['group'].to_list()
     else:
         logging.info("No group labels supplied")
         groups = [None] * len(sessions)
-
+    
     return sessions, groups
 
 def load_norm_subject_seed(dataname, seedID):
