@@ -25,25 +25,7 @@ import pycap_functions.pycap_utils as utils
 # from memory_profiler import profile
 # @profile
 
-
-def load_norm_subject_wb(dataname, mask, bold_type):
-    # an individual (time points x space) matrix
-    data = nib.load(dataname).get_fdata(dtype=np.float32)
-
-    if mask:
-        logging.info("Masking...")
-        if bold_type == "CIFTI":
-            data = apply_mask_cifti(data, mask)
-        else:
-            data = apply_mask(data, mask)
-
-    zdata = stats.zscore(data, axis=0)  # Normalize each time-series
-    del data
-    return zdata
-
-
-
-def load_groupdata_wb(filein, param):
+def build_groupdata(filein, param):
     homedir = filein.sessions_folder
     sublist = filein.sublist
     fname = filein.fname
@@ -55,9 +37,6 @@ def load_groupdata_wb(filein, param):
         seed_based = None
     else:
         seed_based = seed_args['seed_based'].lower() == "yes"
-    #seed_based = param.seed_based.lower() == "yes"
-    #sdim = param.sdim
-    #tdim = param.tdim
 
     msg = "============================================"
     logging.info(msg)
@@ -121,13 +100,6 @@ def load_groupdata_wb(filein, param):
         seed = seed_args['seed']
         seed_t = utils.get_seedtype(seed)
         seeddata_all = np.empty((tdim, 1), dtype=np.float32)
-        # if seed_t == "list": seed_dim = len(seed)
-        # elif seed_t == "index": seed_dim = 1
-        # #mask
-        # elif seed_t == "file":
-        #     seed = nib.load(seed)
-        #     seed_dim = seed.get_fdata().sum()
-        # seeddata_all = np.empty((tdim, seed_dim), dtype=np.float32)
     else:
         seeddata_all = None
 
@@ -161,7 +133,7 @@ def load_groupdata_wb(filein, param):
                 data = apply_mask(data, mask)
 
         zdata = stats.zscore(data, axis=0)
-        #zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
+
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
 
 
@@ -199,7 +171,7 @@ def create_groupdata(filein, param):
 
     msg = "Loading individual whole-brain fMRI data."
     logging.info(msg)
-    data_all, sublabel_all, seeddata_all = load_groupdata_wb(filein=filein, param=param)
+    data_all, sublabel_all, seeddata_all = build_groupdata(filein=filein, param=param)
     logging.info("Load success!")
     return data_all, sublabel_all, seeddata_all
 
@@ -240,12 +212,7 @@ def load_groupdata_motion(filein, param):
         logging.info(msg)
         motion_data_ind = np.array([])
 
-        #runiter = 1
-        #for n_run in run_order:
-
-            # - Load motion estimates in each run from QuNex output
-        # motion_data_filen = homedir + str(subID) + \
-        #     "/images/functional/movement/bold" + str(n_run) + ".bstats"
+        # - Load motion estimates in each run from QuNex output
         motion_data_filen = os.path.join(homedir, str(subID), filein.motion_file)
         #QuNex .bstats loading
         if '.bstats' in motion_data_filen:
@@ -270,18 +237,7 @@ def load_groupdata_motion(filein, param):
                                    error=f'Failed to open motion file {motion_data_filen}',
                                    action="Only compatible with .bstats, .tsv, .csv, or line-seperated single column data." \
                                     "If you have multiple columns, please specify 'motion_type'")
-
-        # - Remove dummy time-frames
-        #motion_data_run = np.delete(motion_data_run, range(n_dummy), 0)
-
-        # - Concatenate individual runs ( ((n_runs) x n_timeframes) x 1 )
-        # if runiter == 1:
-        #     motion_data_ind = motion_data_run
-        # elif runiter > 1:
-        #     motion_data_ind = np.concatenate((motion_data_ind, motion_data_run), axis=0)
-
-        #runiter = runiter+1
-
+            
         # ------------------------------------------
         #       Stack individual motion data
         # ------------------------------------------
@@ -299,87 +255,6 @@ def load_groupdata_motion(filein, param):
     logging.info(msg)
 
     return motion_data_all
-
-
-
-# def load_groupdata_wb_daylabel(filein, param):
-#     homedir = filein.sessions_folder
-#     sublist = filein.sublist
-#     fname = filein.fname
-#     gsr = param.gsr
-#     unit = param.unit
-#     mask_file = param.mask
-
-#     msg = "============================================"
-#     logging.info(msg)
-#     msg = "[whole-brain] Load " + unit + \
-#         "-level time-series data preprocessed with " + gsr + ".."
-#     logging.info(msg)
-
-#     #set up dimensions for subject concatenated array
-#     tdim = 0
-#     sdim = 0
-#     for idx, subID in enumerate(sublist):
-#         # - Load fMRI data
-#         dataname = os.path.join(homedir, str(subID), fname)
-#         #If data was concatenated using pycap_concatenate, dimensions are saved
-#         if os.path.exists(dataname + ".npy"):
-#             dshape = np.load(dataname + ".npy")
-#         #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
-#         else:
-#             dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
-#             np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
-#         tdim += dshape[0]
-#         if sdim == 0:
-#             sdim = dshape[1]
-#         else:
-#             if sdim != dshape[1]:
-#                 exit() #ERROR
-
-#     if mask_file != None:
-#         #What different formats do masks come in?
-#         mask = nib.load(mask_file)
-#         #Output after masking will be where mask array == 1 or True, so can be used for dimension
-#         sdim = mask.get_fdata().sum()
-#     else:
-#         mask = None
-
-#     data_all = np.empty((len(sublist) * tdim, sdim), dtype=np.float32)
-#     sublabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
-#     daylabel_all = np.empty((len(sublist) * tdim, ), dtype=np.int32)
-#     ptr = 0
-#     for idx, subID in enumerate(sublist):
-#         # - Load fMRI data
-#         dataname = os.path.join(homedir, str(subID), "images", "functional", fname)
-#         zdata = load_norm_subject_wb(dataname, mask, param.bold_type)
-#         data_all[ptr:ptr+zdata.shape[0], :] = zdata
-#         # - Create subject label
-#         subid_v = [subID] * zdata.shape[0]
-#         subid_v = np.array(subid_v)
-#         sublabel_all[ptr:ptr+zdata.shape[0], ] = subid_v
-#         # - Creat day label
-#         day_v = np.empty(zdata.shape[0]); day_v.fill(1)
-#         runlen=int(zdata.shape[0]/2)
-#         day_v[runlen:] = 2 
-#         daylabel_all[ptr:ptr+zdata.shape[0], ] = day_v
-#         # - Update/delete variables
-#         ptr += zdata.shape[0]
-
-#         msg = "(Subject " + str(idx) + ")" + dataname + " " + \
-#             ", data:" + str(zdata.shape) + ", subject label:" + str(subid_v.shape) + \
-#             ", day label:" + str(day_v.shape)
-#         logging.info(msg)
-
-#         del zdata, subid_v
-
-#     msg = ">> Output 1: a (" + str(data_all.shape[0]) + " x " + \
-#         str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
-#     logging.info(msg)
-#     msg = ">> Output 2: a " + str(sublabel_all.shape) + " array of (group concatenated subject label)."
-#     logging.info(msg)
-#     msg = ">> Output 3: a " + str(daylabel_all.shape[0]) + " array of (group concatenated day label)."
-#     logging.info(msg)    
-#     return data_all, sublabel_all, daylabel_all
 
 def concatenate_data(files, ndummy, bold_type, bold_labels):
     im_list = []
@@ -484,78 +359,6 @@ def load_norm_subject_seed(dataname, seedID):
     zdata = stats.zscore(seedmean, axis=0)  # - Normalize each time-series
     del data
     return zdata
-
-def load_groupdata_seed(filein, param):
-    homedir = filein.sessions_folder
-    sublist = filein.sublist
-    fname = filein.fname
-    gsr = param.gsr
-    unit = param.unit
-    seedID = param.seedID
-
-    msg = "============================================"
-    logging.info(msg)
-    msg = "[seed-region] seedID: " + \
-        str(seedID) + ", load " + unit + "-level time-series preprocessed with " + gsr + ".."
-    logging.info(msg)
-
-    #set up dimensions for subject concatenated array
-    tdim = 0
-    for idx, subID in enumerate(sublist):
-        # - Load fMRI data
-        dataname = os.path.join(homedir, str(subID), fname)
-        #If data was concatenated using pycap_concatenate, dimensions are saved
-        if os.path.exists(dataname + ".npy"):
-            dshape = np.load(dataname + ".npy")
-        #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
-        else:
-            dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
-        tdim += dshape[0]
-
-
-    seeddata_all = np.empty((tdim, len(sublist)), dtype=np.float32)
-    for idx, subID in enumerate(sublist):
-        # - Load the mean seed time-course
-        dataname = dataname = homedir + str(subID) + "/images/functional/" + fname
-        zdata = load_norm_subject_seed(dataname, seedID)
-        seeddata_all[:, idx] = zdata
-
-        msg = "(Subject " + str(idx) + ")" + dataname + \
-            " : seed average time-series " + str(zdata.shape)
-        logging.info(msg)
-
-        del zdata
-
-    msg = ">> Output: a (" + str(seeddata_all.shape[0]) + " x " + \
-        str(seeddata_all.shape[1]) + ") array of (seed average time-series x n_subjects)."
-    logging.info(msg)
-    return seeddata_all
-
-def load_groupdata_seed_usesaved(filein, param):
-    # filein.groupdata_seed_filen = filein.datadir + "hpc_groupdata_" + \
-    #     param.seedIDname + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5"
-    filein.groupdata_seed_filen = os.path.join(filein.datadir,  "hpc_groupdata_wb_" + \
-        param.seedIDname + "_" + param.unit + "_" + param.gsr + "_" + param.spdatatag + ".hdf5")
-    if os.path.exists(filein.groupdata_seed_filen):
-        msg = "File exists. Load concatenated seed fMRI/label data file: " + filein.groupdata_seed_filen
-        logging.info(msg)
-
-        f = h5py.File(filein.groupdata_seed_filen, 'r')
-        seeddata_all = f['seeddata_all']
-
-    else:
-        msg = "File does not exist. Load individual seed-region fMRI data."
-        logging.info(msg)
-
-        seeddata_all = load_groupdata_seed(filein=filein, param=param)
-        f = h5py.File(filein.groupdata_seed_filen, "w")
-        dset1 = f.create_dataset(
-            "seeddata_all", (seeddata_all.shape[0], seeddata_all.shape[1]), dtype='float32', data=seeddata_all)
-        f.close()
-
-        msg = "Saved the average seed fMRI/label data in: " + filein.groupdata_seed_filen
-        logging.info(msg)
-    return seeddata_all
 
 def apply_mask_cifti(data, mask):
     """

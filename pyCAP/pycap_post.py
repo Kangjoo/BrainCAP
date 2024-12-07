@@ -103,47 +103,9 @@ else:
 
 param.tag = args.tag
 
-# if param.unit == "d":
-#     param.sdim = 91282
-# elif param.unit == "p":
-#     param.sdim = 718
-# param.tdim = 4400
-#param.permutation_type = args.permutation_type
-
-
-# - parameters for seed signal selection
-# param.seed_type = args.seed_type
-# if param.seed_type == "seedbased":
-#     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
-#                       'Prep', '--seed_type=seedbased')
-#     param.seedIDname = args.seed_name
-#     param.seedID = eval(param.seedIDname)
-#     param.event_combine = args.event_combine
-#     param.eventtype = args.event_type
-#     param.sig_thresholdtype = args.seed_threshtype
-#     param.sig_threshold = args.seed_threshold
-# #Defaults
-# if param.seed_type == "seedfree":
-#     param.seedIDname = param.seed_type
-#     param.time_threshold = args.time_threshold
-#     param.sig_thresholdtype = "P"
-
 param.overwrite = overwrite
 
-# # - parameters for motion scrubbing
-# if args.scrubbing.lower() == "yes":
-#     utils.handle_args(args, ['scrubbing','motion_type','motion_threshold','display_motion'], 
-#                       'Prep', '--scrubbing=yes')
-#     param.scrubbing = args.scrubbing
-#     param.motion_type = args.motion_type
-#     param.motion_threshold = args.motion_threshold  # dvarsmt=[3.0], dvarsmet=[1.6], fdr=[0.5]
-#     param.display_motion = args.display_motion
-# else:
-#     param.scrubbing = args.scrubbing
-# param.n_dummy = args.ndummy
-# #param.run_order = list(args.runorder)
-
-# # - parameters for k-means clustering
+# # - parameters for clustering
 param.cluster_args = utils.string2dict(args.cluster_args)
 param.savecapimg = args.save_image
 
@@ -162,14 +124,6 @@ filein.sessions_folder = args.sessions_folder
 filein.sublistfull, filein.groups = parse_sfile(args.sessions_list)
 filein.pscalar_filen = args.parc_file
 
-#filein.fname = args.bold_path
-#filein.motion_file = args.motion_path
-
-# if '|' in args.split:
-#     splits = args.split.split('|')
-# else:
-#     splits = [args.split]
-
 for split_i in range(args.permutations):
     #adjust to non-index count
     split = split_i + 1
@@ -178,12 +132,6 @@ for split_i in range(args.permutations):
 
     split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
-    # filein.outpath = os.path.join(split_dir, f"{param.gsr}_{param.seedIDname}", 
-    #                                 f"{param.sig_thresholdtype}{str(param.time_threshold)}/")
-
-    # filein.datadir = os.path.join(split_dir, f"{param.gsr}_{param.seedIDname}", 
-    #                                 f"{param.sig_thresholdtype}{str(param.time_threshold)}", "session_data/")
-
     filein.outpath = split_dir
     filein.datadir = os.path.join(split_dir, "data/")
     param.overwrite = args.overwrite
@@ -211,27 +159,6 @@ for split_i in range(args.permutations):
         msg = "    >> np.unique(filein.sublist) : " + str(np.unique(filein.sublist))
         logging.info(msg)
 
-        # Setup output directory
-        # filein.analysis_folder = filein.outpath + param.spdatatag + "/"
-        # isExist = os.path.exists(filein.analysis_folder)
-        # if not isExist:
-        #     os.makedirs(filein.analysis_folder)
-
-        # -------------------------------------------
-        # - Load a time by space data matrix from individual and temporally concatenate
-        # -------------------------------------------
-
-        # -------------------------------------------
-        # - Frame-selection to find the moments of activation
-        # -------------------------------------------
-
-        # if param.seed_based == "yes":
-        #     # Reference: Liu and Duyn (2013), PNAS
-        #     seeddata_all = load_groupdata_seed_usesaved(filein=filein, param=param)
-        #     # data_all_fsel, sublabel_all_fsel = frameselection_seed(
-        #     #     inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
-        # else:
-        #     # Reference: Liu et al. (2013), Front. Syst. Neurosci.
         data_all_fsel, sublabel_all_fsel = load_groupdata(filein, param)
 
         msg = "    >> np.unique(sublabel_all_fsel) : " + str(np.unique(sublabel_all_fsel))

@@ -107,7 +107,6 @@ param = Param()
 # # - parameters for data selection
 if args.gsr.lower() == "yes":
     param.gsr = "gsr"
-#elif args.gsr.lower()  == "no":
 else:
     param.gsr = "nogsr"
 
@@ -123,26 +122,6 @@ if not args.bold_type:
     param.bold_type = utils.get_bold_type(args.bold_path)
 else:
     param.bold_type = args.bold_type
-
-#param.randTthreshold = args.time_threshold
-#param.subsplit_type = args.permutation_type
-
-
-# - parameters for seed signal selection
-# param.seed_based = args.seed_based
-# if param.seed_based == "yes":
-#     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
-#                       'Prep', '--seed_type=seedbased')
-#     param.seedIDname = args.seed_name
-#     param.seedID = eval(param.seedIDname)
-#     param.event_combine = args.event_combine
-#     param.eventtype = args.event_type
-#     param.sig_thresholdtype = args.seed_threshtype
-#     param.sig_threshold = args.seed_threshold
-# #Defaults
-# else:
-    
-#     param.sig_thresholdtype = "P"
 
 if not args.seed_args:
     param.seed_args == None
@@ -161,16 +140,6 @@ if args.scrubbing.lower() == "yes":
     param.display_motion = args.display_motion
 else:
     param.scrubbing = args.scrubbing
-# param.n_dummy = args.ndummy
-# #param.run_order = list(args.runorder)
-
-# # - parameters for k-means clustering
-# param.kmean_k = args.ncluster
-# param.kmean_krange = [args.mink, args.maxk]
-# param.kmean_max_iter = args.maxiter
-# param.kmean_kmethod = args.kmethod
-# param.savecapimg = args.savecapimg
-
 
 # -------------------------------------------
 #              Setup input data
@@ -195,9 +164,6 @@ for split_i in range(args.permutations):
 
     split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
-    # filein.outpath = os.path.join(split_dir, f"{param.gsr}_{param.seedIDname}", 
-    #                                 f"{param.sig_thresholdtype}{str(param.time_threshold)}/")
-
     filein.outpath = split_dir
     filein.datadir = os.path.join(split_dir, "data/")
     
@@ -232,12 +198,6 @@ for split_i in range(args.permutations):
         msg = "    >> np.unique(filein.sublist) : " + str(np.unique(filein.sublist))
         logging.info(msg)
 
-        # Setup output directory
-        # filein.analysis_folder = filein.outpath + param.spdatatag + "/"
-        # isExist = os.path.exists(filein.analysis_folder)
-        # if not isExist:
-        #     os.makedirs(filein.analysis_folder)
-
         # -------------------------------------------
         # - Load a time by space data matrix from individual and temporally concatenate
         # -------------------------------------------
@@ -250,13 +210,6 @@ for split_i in range(args.permutations):
         # - Frame-selection to find the moments of activation
         # -------------------------------------------
 
-        # if param.seed_based == "yes":
-        #     # Reference: Liu and Duyn (2013), PNAS
-        #     seeddata_all = load_groupdata_seed_usesaved(filein=filein, param=param)
-        #     data_all_fsel, sublabel_all_fsel = frameselection_seed(
-        #         inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
-        # else:
-        #     # Reference: Liu et al. (2013), Front. Syst. Neurosci.
         data_all_fsel, sublabel_all_fsel = prep_scrubbed(
             inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
 

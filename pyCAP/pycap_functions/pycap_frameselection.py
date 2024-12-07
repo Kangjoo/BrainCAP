@@ -23,27 +23,6 @@ import pycap_functions.pycap_utils as utils
 from memory_profiler import profile
 
 # @profile
-
-# def load_scrubbed(filein, param):
-#     labeldata_fsel_outfilen = os.path.join(filein.datadir, param.tag + "concdata_" + param.spdatatag + "_scrubbed" + ".hdf5")
-#     if os.path.exists(labeldata_fsel_outfilen):
-#         msg = "File exists. Load concatenated fMRI/label data file: " + filein.groupdata_wb_filen
-#         logging.info(msg)
-
-#         f = h5py.File(labeldata_fsel_outfilen, 'r')
-#         inputdata_fsel = np.array(f['inputdata_fsel'])
-
-#         #np.asarray([filein.sublist[idx] for idx in f['labeldata_fsel']])
-#         labeldata_fsel = utils.index2id(np.array(f['labeldata_fsel']), filein.sublistfull)
-    
-#     else:
-#         raise pe.StepError(step="Loading motion-selected data",
-#                            error=f"Failed to find data {labeldata_fsel_outfilen}",
-#                            action="Check prep_pycap outputs")
-        
-#     return inputdata_fsel, labeldata_fsel
-    
-
 def prep_scrubbed(inputdata, labeldata, seeddata, filein, param):
     # inputdata: (concantenated time points x space) matrix of whole brain time-course
 
@@ -82,6 +61,7 @@ def prep_scrubbed(inputdata, labeldata, seeddata, filein, param):
 
         flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist, inputdata)
 
+        #Flag based on seed, if no seed will flag all as usable
         if seed_based:
             flag_events_all = frameselection_seedactivation(seeddata, seed_args, param, sublist, labeldata)
         else:
@@ -123,93 +103,11 @@ def prep_scrubbed(inputdata, labeldata, seeddata, filein, param):
             "sublabel_all", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel,filein.sublistfull))
         dset2 = f.create_dataset(
             "data_all", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
-        # dset1 = f.create_dataset(
-        #     "data_all", (data_all.shape[0], data_all.shape[1]), dtype='float32', data=data_all)
         f.close()
         msg = "Saved subject labels corresponding to selected frames in " + labeldata_fsel_outfilen
         logging.info(msg)
-        # else:
-        #     msg = "Do not save Frame-wise subject labels. The Framelabel file may exist: " + labeldata_fsel_outfilen
-        #     logging.info(msg)
 
     return inputdata_fsel, labeldata_fsel
-
-
-
-
-# @profile
-def frameselection_wb_daylabel(inputdata, daydata, filein, param):
-    # inputdata: (concantenated time points x space) matrix of whole brain time-course
-
-    outdir = filein.datadir
-    sublist = filein.sublist
-
-    msg = "============================================"
-    logging.info(msg)
-    msg = "[Temporal frame selection]"
-    logging.info(msg)
-
-    # ------------------------------------------------------------------------
-    #   Select datapoints if split data
-    # ------------------------------------------------------------------------
-
-    try:
-        flag_sp = frameselection_Tsubsample(inputdata.shape[0], filein, param)
-    except:
-        msg = "No timepoints splitted."
-        logging.info(msg)
-
-    # ------------------------------------------------------------------------
-    #   Motion scrubbing
-    # ------------------------------------------------------------------------
-
-    flag_scrubbed_all, motion_metric = frameselection_motion(filein, param, sublist, inputdata)
-
-    # ------------------------------------------------------------------------
-    #   Combine all frame flags (1: select, 0: remove)
-    # ------------------------------------------------------------------------
-
-    if 'flag_sp' in locals():
-        flag_comb = np.array((flag_scrubbed_all + flag_sp) > 1, dtype=int)
-    else:
-        flag_comb = np.array((flag_scrubbed_all) > 0, dtype=int)
-    flag_all = np.array(np.where(flag_comb == 1))
-    flag_all_idx = flag_all.tolist()
-
-    # - QC
-    framenum_comb = np.size(flag_all_idx)
-    percent_comb = (framenum_comb) / np.shape(flag_comb)[0] * 100
-    msg = "Combined frame selection: " + str(framenum_comb) + "/" + str(np.shape(flag_comb)[0]) + " frame(s) (" + str(
-        round(percent_comb, 2)) + "% of total time-frames) has(ve) been selected finally."
-    logging.info(msg)
-
-    # ------------------------------------------------------------------------
-    #   Final frame selection
-    # ------------------------------------------------------------------------
-
-    daydata_fsel = daydata[tuple(flag_all_idx)]
-    
-    # ------------------------------------------------------------------------
-    #   Save output files
-    # ------------------------------------------------------------------------
-
-    daydata_fsel_outfilen = os.path.join(outdir, "Framelabel_day.hdf5")
-
-
-    f = h5py.File(daydata_fsel_outfilen, "w")
-    dset1 = f.create_dataset(
-        "daydata_fsel", (daydata_fsel.shape[0],), dtype='int', data=daydata_fsel)
-    f.close()
-    msg = "Saved day labels corresponding to selected frames in " + daydata_fsel_outfilen
-    logging.info(msg)
-
-
-    return daydata_fsel
-
-
-
-
-
 
 # @profile
 def motion_qc(filein, param):
