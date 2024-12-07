@@ -2,11 +2,12 @@
 
 import argparse
 import os
-from pycap_functions.pycap_loaddata import concatenate_data, concatenate_motion, parse_slist
+from pycap_functions.pycap_loaddata import concatenate_data, concatenate_motion, parse_sfile
 import nibabel as nib
 import logging
 import time
 import numpy as np
+import pandas as pd
 import pycap_functions.pycap_exceptions as pe
 import pycap_functions.pycap_utils as pu
 
@@ -39,6 +40,7 @@ parser.add_argument( "--overwrite", type=str, required=False, default="no", help
 parser.add_argument("--ndummy", type=int, default=0, help="Number of dummy frames to remove")
 parser.add_argument("--log_path", default='./concatenate_bolds.log', help='Path to output log', required=False)
 parser.add_argument("--bold_type", default=None, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
+parser.add_argument("--bold_labels", default=None, help="BOLD data label, useful for longitudinal analyses")
 
 args = parser.parse_args()
 
@@ -56,9 +58,28 @@ logging.info("PYCAP CONCATENATE BEGIN")
 #Wait for a moment so run_pycap.py log tracking can keep up
 time.sleep(1)
 
-slist = parse_slist(args.sessions_list)
+slist, groups = parse_sfile(args.sessions_list)
 
+#Check BOLD images are of compatible and same type
 bold_list = args.bold_files.split('|')
+
+if args.bold_labels is not None:
+    bold_labels = args.bold_labels.split('|')
+else:
+    bold_labels = [None] * len(bold_list)
+
+if bold_labels is not None and len(bold_list) != len(bold_labels):
+    raise pe.StepError(step='pycap concatenate',
+                       error=f'{len(bold_list)} bold files supplied, but {len(bold_labels)} labels given',
+                       action="--bold_files and --bold_labels must have the same length")
+
+bold_type = None
+for bold in bold_list:
+    if not bold_type:
+        bold_type = pu.get_bold_type(bold)
+    elif bold_type != pu.get_bold_type(bold):
+        raise pe.StepError()
+        
 if args.motion_files is not None:
     logging.info("--motion_files supplied, will run motion concatenation")
     conc_motion = True
@@ -69,39 +90,50 @@ else:
 
 logging.info(f"Beginning bold concatenation for sessions in {args.sessions_list}...")
 
-for session in slist:
+for session, group in zip(slist, groups):
     logging.info(f"    Processing {session}")
-    #Check BOLD images are of compatible and same type
-    bold_type = None
-    for bold in bold_list:
-        if not bold_type:
-            bold_type = pu.get_bold_type(bold)
-        elif bold_type != pu.get_bold_type(bold):
-            raise pe.StepError()
-
+    logging.info(session)
+    logging.info(bold_list)
     bolds = [os.path.join(args.sessions_folder, session, bold) for bold in bold_list]
     bolds_string = '\t\t\n'.join(bolds)
     logging.info(f"        Searching for files:")
     logging.info(bolds_string)
     logging.info(f"        Running bold concatenation...")
     conc_path = os.path.join(args.sessions_folder, session, args.bold_out)
+    info_path = os.path.join(args.sessions_folder, session, f"{args.bold_out.split('.')[0]}_info.csv")
     if os.path.exists(conc_path):
         logging.info(f"           Warning: Existing concatenated bold file found")
         if args.overwrite.lower() == 'yes':
             logging.info(f"           overwrite=yes, overwriting...")
-            conc = concatenate_data(bolds, args.ndummy, bold_type)
+            conc, conc_labels = concatenate_data(bolds, args.ndummy, bold_type, bold_labels)
             nib.save(conc, conc_path)
             np.save(conc_path, conc.get_fdata().shape)
+            group_list = [group] * len(conc_labels)
+            id_list = [session] * len(conc_labels)
+            id_list = [session] * len(conc_labels)
+            info_df = pd.DataFrame()
+            info_df['session_id'] = id_list
+            info_df['group'] = group_list
+            info_df['label'] = conc_labels
+            info_df.to_csv(info_path, index=False)
             logging.info(f"        File {conc_path} created!")
         else:
             logging.info(f"           overwrite=no, skipping...")
     else:
-        conc = concatenate_data(bolds, args.ndummy, bold_type)
+        conc, conc_labels = concatenate_data(bolds, args.ndummy, bold_type, bold_labels)
         nib.save(conc, conc_path)
         np.save(conc_path, conc.get_fdata().shape)
+        group_list = [group] * len(conc_labels)
+        id_list = [session] * len(conc_labels)
+        info_df = pd.DataFrame()
+        info_df['session_id'] = id_list
+        info_df['group'] = group_list
+        info_df['label'] = conc_labels
+        info_df.to_csv(info_path, index=False)
         logging.info(f"        File {conc_path} created!")
 
-    del conc
+
+    del conc, conc_labels, group_list, id_list
 
     if conc_motion:
         logging.info(f"        Running motion concatenation...")
@@ -120,6 +152,7 @@ for session in slist:
             with open(conc_path, 'w') as f:
                 f.write('\n'.join(concatenate_motion(motions, args.ndummy)))
             logging.info(f"        File {conc_path} created!")
+
 
     logging.info(f"        {session} concatenated sucessfully\n")
 
