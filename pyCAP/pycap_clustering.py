@@ -52,39 +52,17 @@ def local_path(path):
 
 
 parser = argparse.ArgumentParser()
-#parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
-#parser.add_argument("--save_image", type=str, default='no', help="Save CAP images or not (y/n)")
-parser.add_argument("--k_method", default='silhouette', type=str, help="(sse/silhouette)")
-#parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
-#parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both")
-#parser.add_argument("--gsr", type=str, default="y", help="(y/n)")
 parser.add_argument("--sessions_folder", type=dir_path, help="Home directory path")
-#parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
 parser.add_argument("--analysis_folder", type=dir_path, help="Output directory path")
 parser.add_argument("--permutation", help="Which specific permutation(s) to run. If multiple, must be a pipe '|' seperated list.")
 #In wrapper script, derived from k range
 parser.add_argument("--cluster_args", type=str, required=True, help="Args for sklearn clustering in form 'key1=val1,key2=val2'. " \
                     "Must have key '_method', corresponding to a function in sklearn.clustering, and key '_variable', corresponding to the clustering variable")
-#parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
-#parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
-parser.add_argument("--seed_based", type=str, default="no", help="(yes/no), default 'no'")
-#parser.add_argument("--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
-#parser.add_argument("--seed_name", type=str, help="Seed name")
-#parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
-#parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
-#parser.add_argument("--permutation_type", default='random', type=str, help="random/days, default 'random'")
-#parser.add_argument("--time_threshold", type=float, default=100, help="Random Time Signal threshold") #seedfree
-#NEED FIX FOR DENSE 
-#parser.add_argument("--parc_file", type=file_path, required=False ,help="Path to parcellation template")
-#parser.add_argument("--motion_threshold", type=float, help="Motion threshold")
-# parser.add_argument("--display_motion", type=str,
-#                     help="Display motion parameter or not (y/n)")
-#parser.add_argument("-step", "--step", type=str, help="Step to run (step1 or step2)")
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
-parser.add_argument("--mask", default=None, help="Brain mask, recommended for dense data")
+#parser.add_argument("--mask", default=None, help="Brain mask, recommended for dense data")
 parser.add_argument("--bold_type", required=True, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
 parser.add_argument("--tag", default="", help="Tag for saving files, useful for doing multiple analyses in the same folder (Optional).")
 args = parser.parse_args()  # Read arguments from command line
@@ -101,7 +79,7 @@ formatter = logging.Formatter('%(asctime)s - %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
 
-logging.info("PyCap Run Start")
+logging.info("PyCap Clustering Start")
 #Wait for a moment so run_pycap.py log tracking can keep up
 time.sleep(1)
 
@@ -131,51 +109,15 @@ param = Param()
 # elif 'dtseries' in args.bold_path:
 #     param.unit = 'd'
 
-param.mask = args.mask
+#param.mask = args.mask
 param.bold_type = args.bold_type
 param.tag = args.tag
 # param.permutation_type = args.permutation_type
 
-
-# - parameters for seed signal selection
-param.seed_based = args.seed_based
-# if param.seed_type == "seedbased":
-#     utils.handle_args(args, ['seed_name','motion_type','motion_threshold','display_motion','event_combine','event_type'], 
-#                       'Prep', '--seed_type=seedbased')
-#     param.seedIDname = args.seed_name
-#     param.seedID = eval(param.seedIDname)
-#     param.event_combine = args.event_combine
-#     param.eventtype = args.event_type
-#     param.sig_thresholdtype = args.seed_threshtype
-#     param.sig_threshold = args.seed_threshold
-# #Defaults
-# if param.seed_type == "seedfree":
-#     param.seedIDname = param.seed_type
-#     param.time_threshold = args.time_threshold
-#     param.sig_thresholdtype = "P"
-
 param.overwrite = overwrite
 
-# # # - parameters for motion scrubbing
-# if args.scrubbing.lower() == "yes":
-#     utils.handle_args(args, ['scrubbing','motion_type','motion_threshold','display_motion'], 
-#                       'Prep', '--scrubbing=yes')
-#     param.scrubbing = args.scrubbing
-#     param.motion_type = args.motion_type
-#     param.motion_threshold = args.motion_threshold  # dvarsmt=[3.0], dvarsmet=[1.6], fdr=[0.5]
-#     param.display_motion = args.display_motion
-# else:
-#     param.scrubbing = args.scrubbing
-# param.n_dummy = args.ndummy
-# #param.run_order = list(args.runorder)
-
-# # - parameters for clustering
 param.cluster_args = utils.string2dict(args.cluster_args)
-#param.kmean_k = args.n_k
-# param.kmean_krange = [args.min_k, args.max_k]
-#param.kmean_max_iter = args.max_iter
-#param.kmean_kmethod = args.k_method
-#param.savecpimg = args.save_image
+
 
 
 # -------------------------------------------
@@ -189,7 +131,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublistfull= parse_slist(args.sessions_list)
+filein.sublistfull, filein.groups = parse_sfile(args.sessions_list)
 #filein.pscalar_filen = args.parc_file
 
 #filein.fname = args.bold_path

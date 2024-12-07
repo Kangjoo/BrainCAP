@@ -52,30 +52,13 @@ def local_path(path):
 
 
 parser = argparse.ArgumentParser()
-#parser.add_argument("--scrubbing", type=str, help="Use scrugging or not (y/n)")
 parser.add_argument("--save_image", type=str, default='no', help="Save CAP images or not (y/n)")
-#parser.add_argument("--k_method", default='silhouette', type=str, help="(sse/silhouette)")
-#parser.add_argument("-ev", "--event_combine", type=str, help="(average/interserction/union)")
-#parser.add_argument("-et", "--event_type", type=str, help="activation/deactivation/both")
-#parser.add_argument("--gsr", type=str, default="y", help="(y/n)")
 parser.add_argument("--sessions_folder", type=dir_path, help="Home directory path")
-#parser.add_argument("--bold_path", type=local_path, help="Path to datafile inside session directory")
 parser.add_argument("--analysis_folder", type=dir_path, help="Output directory path")
 parser.add_argument("--permutations", type=int, default=1, help="Range of permutations to run, default 1.")
-#parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
-#parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
-#parser.add_argument("--seed_type", type=str, default="seedfree", help="(seedfree/seedbased), default 'seedfree'")
-#parser.add_argument("--seed_name", type=str, help="Seed name")
-#parser.add_argument("--seed_threshtype", type=str, help="(T/P)")
-#parser.add_argument("--seed_threshold", type=float, help="Signal threshold")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
-#parser.add_argument("--permutation_type", default='random', type=str, help="random/days, default 'random'")
-#parser.add_argument("--time_threshold", type=float, default=100, help="Random Time Signal threshold") #seedfree
 parser.add_argument("--parc_file", type=file_path, required=False ,help="Path to parcellation template, required to save CAP image for parcellated data")
-# parser.add_argument("--motion_threshold", type=float, help="Motion threshold")
-# parser.add_argument("--display_motion", type=str,
-#                     help="Display motion parameter or not (y/n)")
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
 parser.add_argument("--mask", default=None, help="Brain mask, required for dense data and saving CAP image.")
@@ -111,20 +94,6 @@ class Param:
 
 
 param = Param()
-
-
-
-# # - parameters for data selection
-# if args.gsr.lower() == "yes":
-#     param.gsr = "gsr"
-# #elif args.gsr.lower()  == "no":
-# else:
-#     param.gsr = "nogsr"
-
-# if 'ptseries' in args.bold_path:
-#     param.unit = 'p'
-# elif 'dtseries' in args.bold_path:
-#     param.unit = 'd'
 
 param.mask = args.mask
 if not args.bold_type:
@@ -190,7 +159,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublistfull = parse_slist(args.sessions_list)
+filein.sublistfull, filein.groups = parse_sfile(args.sessions_list)
 filein.pscalar_filen = args.parc_file
 
 #filein.fname = args.bold_path

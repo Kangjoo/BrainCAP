@@ -53,9 +53,11 @@ def convert_bool(arg_dict):
     we need strings.
     """
     for arg in arg_dict.keys():
+        if isinstance(arg_dict[arg], dict):
+            arg_dict[arg] = convert_bool(arg_dict[arg])
         if isinstance(arg_dict[arg], bool):
-            if arg_dict[arg]: arg_dict[arg] == 'yes'
-            else: arg_dict[arg] == 'no'
+            if arg_dict[arg]: arg_dict[arg] = 'yes'
+            else: arg_dict[arg] = 'no'
 
     return arg_dict
     
@@ -81,13 +83,13 @@ arg_dict = {'required':
                  }, 
             'optional':
                 {'concatenate_bolds':
-                 ['overwrite', 'ndummy', 'motion_files', 'motion_out','bold_type'],
+                 ['overwrite', 'ndummy', 'motion_files', 'motion_out','bold_type', 'bold_labels'],
                  'prep':
-                 ['tag','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','time_threshold','motion_threshold','overwrite', 'event_combine','event_type','bold_type','display_motion'],
+                 ['tag','scrubbing','motion_type','motion_path','seed_args','motion_threshold','overwrite', 'event_combine','event_type','bold_type','display_motion'],
                  'clustering':
                  ['tag','overwrite','permutation','bold_type'],
                  'post':
-                 ['tag','scrubbing','motion_type','motion_path','seed_type','seed_name','seed_threshtype','seed_threshold','permutation_type','time_threshold','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type']
+                 ['tag','scrubbing','motion_type','motion_path','seed_args','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type']
                  }
             }
 
@@ -276,7 +278,7 @@ for step in args['steps']:
                 print(f"ERROR! Missing required argument '{arg}' for PyCap '{step}'. Exiting...")
                 exit()
             if type(step_args[arg]) == list:
-                command += f'--{arg} "{list_delim.join(step_args[arg])}" ' 
+                command += f'--{arg} "{list_delim.join(map(str,step_args[arg]))}" ' 
             elif type(step_args[arg]) == dict:
                 command += f'--{arg} {dict2string(step_args[arg])} ' 
             else:
@@ -285,7 +287,7 @@ for step in args['steps']:
         for arg in arg_dict['optional'][step]:
             if arg in step_args.keys():
                 if type(step_args[arg]) == list:
-                    command += f'--{arg} "{list_delim.join(step_args[arg])}" ' 
+                    command += f'--{arg} "{list_delim.join(map(str,step_args[arg]))}" ' 
                 elif type(step_args[arg]) == dict:
                     command += f'--{arg} {dict2string(step_args[arg])} ' 
                 else:
