@@ -94,10 +94,10 @@ arg_dict = {'required':
             }
 
 #Dict containing script paths for each step
-step_dict = {'concatenate_bolds':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_concatenate.py',
-             'prep':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_prep.py',
-             'clustering':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_clustering.py',
-             'post':'/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/pycap_post.py'}
+step_dict = {'concatenate_bolds':'./pycap_concatenate.py',
+             'prep':'./pycap_prep.py',
+             'clustering':'./pycap_clustering.py',
+             'post':'./pycap_post.py'}
 
 schedulers = ['NONE','SLURM']
 
@@ -109,7 +109,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--config", type=file_path, required=True, help="Path to config file with PyCap parameters")
 parser.add_argument("--steps", type=str, help="Comma seperated list of PyCap steps to run. Can also be specified in config")
 parser.add_argument("--dryrun", type=str, default="no", help="Dry-Run which will not actually launch steps")
-args = vars(parser.parse_args())
+args, unknown = parser.parse_known_args()
+args = vars(args)
 
 with open(args['config'], 'r') as f:
     config = yaml.safe_load(f)
