@@ -14,7 +14,7 @@ global: #Parameters applicable to all steps, overwritten if specified in the ste
     n_init: 10
     max_iter: 1000
   seed_args:
-    seed_based: yes #yes, no
+    seed_based: no #yes, no
     seed: 1 #index, mask
     threshold: 50
     threshold_type: P
@@ -37,7 +37,7 @@ concatenate_bolds:
   ndummy: 100
   bold_labels: [2,1,3,4]
   scheduler:
-    type: SLURM
+    type: NONE
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
@@ -47,14 +47,14 @@ concatenate_bolds:
 prep:
   scrubbing: "yes"
   gsr: "yes"
-  bold_path: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  bold_path: "images/functional/bold2143_Atlas_MSMAll_hp2000_clean_res-WB_demean-100f_CAB-NP_Parcels_ReorderedByNetwork.ptseries.nii" #This is the Glasser 360 parcellationaa "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
   motion_type: fd
   motion_path: images/functional/bold2143_conc.bstats
   motion_threshold: 0.5
   display_motion: "no"
   overwrite: "yes"
   scheduler:
-    type: SLURM #SLURM, NONE
+    type: NONE #SLURM, NONE
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
@@ -64,7 +64,7 @@ prep:
 clustering:
   overwrite: "yes"
   scheduler:
-    type: SLURM
+    type: NONE
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
@@ -76,7 +76,7 @@ post:
   save_image: "yes"
   parc_file: "/gpfs/gibbs/pi/n3/Studies/Connectome/Parcellations/CABNP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_ReorderedByNetworks_Zeroes.pscalar.nii"
   scheduler:
-    type: SLURM
+    type: NONE
     cpu_mem: 16G
     cpus: 1
     partition: pi_anticevic
