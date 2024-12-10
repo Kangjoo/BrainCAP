@@ -94,10 +94,11 @@ arg_dict = {'required':
             }
 
 #Dict containing script paths for each step
-step_dict = {'concatenate_bolds':'./pycap_concatenate.py',
-             'prep':'./pycap_prep.py',
-             'clustering':'./pycap_clustering.py',
-             'post':'./pycap_post.py'}
+script_path = os.path.dirname(os.path.realpath(__file__))
+step_dict = {'concatenate_bolds':f'{script_path}/pycap_concatenate.py',
+             'prep':f'{script_path}/pycap_prep.py',
+             'clustering':f'{script_path}/pycap_clustering.py',
+             'post':f'{script_path}/pycap_post.py'}
 
 schedulers = ['NONE','SLURM']
 
