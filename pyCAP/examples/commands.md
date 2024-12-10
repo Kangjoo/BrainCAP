@@ -1,1 +1,0 @@
-python run_pycap.py --config=examples/config.yml
