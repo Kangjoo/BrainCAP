@@ -20,7 +20,7 @@ from pycap_functions.pycap_loaddata import load_groupdata_motion, load_groupdata
 import pycap_functions.pycap_exceptions as pe
 import pycap_functions.pycap_utils as utils
 
-from memory_profiler import profile
+#from memory_profiler import profile
 
 # @profile
 def prep_scrubbed(inputdata, labeldata, seeddata, filein, param):
