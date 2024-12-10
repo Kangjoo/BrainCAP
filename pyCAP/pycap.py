@@ -40,7 +40,7 @@ def follow(filepath, threshold=None):
             if threshold is not None and stall_counter > threshold:
                 break
             stall_counter += 1
-            time.sleep(0.1)
+            time.sleep(0.01)
             continue
         stall_counter = 0
         yield line
@@ -89,7 +89,7 @@ arg_dict = {'required':
                  'clustering':
                  ['tag','overwrite','permutation','bold_type'],
                  'post':
-                 ['tag','scrubbing','motion_type','motion_path','seed_args','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type']
+                 ['tag','scrubbing','motion_type','motion_path','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type']
                  }
             }
 
@@ -150,6 +150,7 @@ for step in args['steps']:
 
     if first: 
         sched_type = step_sched
+        first=False
     elif sched_type != step_sched:
         print(f"ERROR: all specified schedulers must be of same type, expected {sched_type}, found {step_sched}!")
         print(f"If scheduler type unspecified, assumed 'NONE'. Exiting...")
@@ -259,17 +260,19 @@ for step in args['steps']:
         elif sched_type.upper() == "PBS":
             pass
 
-        if ntasks != 1:
+        if ntasks != 1 and sched_type.upper() != "NONE":
             task = "${PERM}"
             step_args['log_path'] = os.path.join(step_args['logs_folder'], f'PyCap_{step}_perm{split}_{task}_{timestamp}.log')
 
         #parameters that depend on task
         if step == "clustering":
             step_args['permutation'] = split
-            command += f"#SBATCH --array={','.join(map(str,step_args['_cvarlist']))}\n"
-            command += "PERM=${SLURM_ARRAY_TASK_ID} \n"
-            
-            step_args['cluster_args'][step_args['_cvar']] = "$PERM"
+            if sched_type.upper() != "NONE":
+                command += f"#SBATCH --array={','.join(map(str,step_args['_cvarlist']))}\n"
+                command += "PERM=${SLURM_ARRAY_TASK_ID} \n"
+                step_args['cluster_args'][step_args['_cvar']] = "$PERM"
+            else:
+                step_args['cluster_args'][step_args['_cvar']] = step_args['_cvarlist']
 
 
 
@@ -324,6 +327,8 @@ for command, log, step in zip(commands, logs, steps):
         
         #Wait a moment so that the file is generated
         t = 0
+        print(f"Running command:\n {command}\n")
+        print(f"Output log: {log}")
         while not os.path.exists(log):
             if t > 5000:
                 print("ERROR! Step failed to launch, halting execution!")
@@ -331,7 +336,6 @@ for command, log, step in zip(commands, logs, steps):
                 exit()
             time.sleep(0.01)
             t += 1
-        print(f"Running command:\n {command}\n")
         print(f"Command launched succesfully! Showing output from {log}")
         #follows step output and prints it
         runlog = follow(log, 6000)
