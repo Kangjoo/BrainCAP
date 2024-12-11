@@ -1,8 +1,8 @@
 global: #Parameters applicable to all steps, overwritten if specified in the step
   sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
-  analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/seedtest_P"
-  sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/labeltest.csv"
-  logs_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/seedtest_P/logs"
+  analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/pycap_test"
+  sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/session_list.csv"
+  logs_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/logs"
   #Clustering/shared arguments 
   permutations: 1
   tag: i1
