@@ -124,30 +124,16 @@ def clusterdata_any(inputdata, filein, param):
     
     return
 
-def finalcluster2cap_any(inputdata, filein, param):
-
-    
-    overwrite = param.overwrite
-    pscalar_filen = filein.pscalar_filen
-    mask_file = param.mask
+def determine_clusters(filein, param):
+    """
+    Checks different clusters and determines optimum values
+    """
 
     cluster_args = param.cluster_args.copy()
     cluster_method = cluster_args.pop('_method', None)
     c_var = cluster_args.pop('_variable', None)
 
     indir = os.path.join(filein.outpath, cluster_method + "_runs_" + param.spdatatag)
-    outdir = os.path.join(filein.outpath, cluster_method + "_results_" + param.spdatatag)
-
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
-
-    msg = "============================================"
-    logging.info(msg)
-    msg = f"[{cluster_method} clustering based CAP generation]"
-    logging.info(msg)
-
-    logging.info(f"Running with cluster variable: {c_var} and the following args:")
-    logging.info(cluster_args)
 
     score_all = []
     for c_val in cluster_args[c_var]:
@@ -176,6 +162,33 @@ def finalcluster2cap_any(inputdata, filein, param):
     logging.info(msg)
     msg = f"The optimal {c_var} is determined as " + str(final_k) + "."
     logging.info(msg)
+
+    return final_k
+
+def finalcluster2cap_any(inputdata, filein, param, final_k):
+
+    
+    overwrite = param.overwrite
+    pscalar_filen = filein.pscalar_filen
+    mask_file = param.mask
+
+    cluster_args = param.cluster_args.copy()
+    cluster_method = cluster_args.pop('_method', None)
+    c_var = cluster_args.pop('_variable', None)
+
+    indir = os.path.join(filein.outpath, cluster_method + "_runs_" + param.spdatatag)
+    outdir = os.path.join(filein.outpath, cluster_method + "_results_" + param.spdatatag)
+
+    if not os.path.exists(outdir):
+        os.makedirs(outdir)
+
+    msg = "============================================"
+    logging.info(msg)
+    msg = f"[{cluster_method} clustering based CAP generation]"
+    logging.info(msg)
+
+    logging.info(f"Running with cluster variable: {c_var} and the following args:")
+    logging.info(cluster_args)
 
     msg = f"Load the results from {cluster_method} clustering on the concatenated data matrix ({c_var} = " + str(final_k) + ").."
     logging.info(msg)
@@ -244,4 +257,4 @@ def finalcluster2cap_any(inputdata, filein, param):
     msg = "Saved cluster mean data matrix in " + P_outfilen2
     logging.info(msg)
 
-    return P
+    return P, clmean

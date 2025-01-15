@@ -89,7 +89,7 @@ arg_dict = {'required':
                  'clustering':
                  ['tag','overwrite','permutation','bold_type'],
                  'post':
-                 ['tag','scrubbing','motion_type','motion_path','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type']
+                 ['tag','scrubbing','motion_type','motion_path','motion_threshold','overwrite', 'event_combine','event_type', 'save_image', 'parc_file','bold_type', 'save_stats', 'cluster_selection', 'use_all']
                  }
             }
 
