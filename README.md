@@ -25,6 +25,7 @@ The `develop` branch focuses on building an open-source software toolkit for Bra
 ## Citation
 If you use BrainCAP in your research, please cite:
 > Kangjoo Lee, Jie Lisa Ji, Clara Fonteneau, Lucie Berkovitch, Masih Rahmati, Lining Pan, Grega Repovš, John H. Krystal, John D. Murray, and Alan Anticevic, Human brain state dynamics are highly reproducible and associated with neural and behavioral features, PLOS Biology 22(9): e3002808 (2024)
+
 The specific version of the code used for Lee et al. (2024) is archived and available at **[Zenodo](https://zenodo.org/records/13251563)**.
 
 ---
