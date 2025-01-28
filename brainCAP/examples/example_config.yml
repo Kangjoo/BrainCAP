@@ -1,0 +1,89 @@
+global: #Parameters applicable to all steps, overwritten if specified in the step
+  sessions_folder: "/gpfs/gibbs/pi/n3/Studies/Connectome/subjects/"
+  analysis_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/jan15"
+  sessions_list: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/session_list.csv"
+  logs_folder: "/gpfs/gibbs/pi/n3/Studies/CAP_Time_Analytics/time-analytics/pyCAP/pyCAP/examples/logs"
+  #Clustering/shared arguments 
+  permutations: 1
+  tag: i1
+  bold_type: CIFTI #CIFTI, NIFTI
+
+  cluster_args:
+    _method: KMeans #All sklearn.cluster methods
+    _variable: n_clusters
+    n_clusters: [2, 3]
+    n_init: 10
+    max_iter: 1000
+    
+  seed_args:
+    seed_based: no #yes, no
+    seed: 1 #index, mask
+    threshold: 50
+    threshold_type: P
+    event_type: activation #activation, deactivation
+  
+concatenate_bolds:
+  bold_files: 
+    - "images/functional/bold2_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+    - "images/functional/bold1_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+    - "images/functional/bold4_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+    - "images/functional/bold3_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  bold_out: "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  motion_files:
+    - images/functional/movement/bold2.bstats
+    - images/functional/movement/bold1.bstats
+    - images/functional/movement/bold4.bstats
+    - images/functional/movement/bold3.bstats
+  motion_out: images/functional/bold2143_conc.bstats
+  overwrite: "yes"
+  ndummy: 100
+  bold_labels: [2,1,3,4]
+  scheduler:
+    type: SLURM
+    cpu_mem: 16G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+    time: "1:00:00"
+
+prep:
+  scrubbing: "yes"
+  gsr: "yes"
+  bold_path: "images/functional/bold2143_Atlas_MSMAll_hp2000_clean_res-WB_demean-100f_CAB-NP_Parcels_ReorderedByNetwork.ptseries.nii" #This is the Glasser 360 parcellationaa "images/functional/bold2143_conc_Atlas_MSMAll_hp2000_clean_res-WB_demean_Glasser_S1200_RelatedValidation210.ptseries.nii"
+  motion_type: fd
+  motion_path: images/functional/bold2143_conc.bstats
+  motion_threshold: 0.5
+  display_motion: "no"
+  overwrite: "yes"
+  scheduler:
+    type: SLURM #SLURM, NONE
+    cpu_mem: 16G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+    time: "02:00:00"
+
+clustering:
+  overwrite: "yes"
+  scheduler:
+    type: SLURM
+    cpu_mem: 16G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+    time: "02:00:00"
+
+post:
+  overwrite: "yes"
+  save_image: "yes"
+  parc_file: "/gpfs/gibbs/pi/n3/Studies/Connectome/Parcellations/CABNP/CortexSubcortex_ColeAnticevic_NetPartition_wSubcorGSR_parcels_LR_ReorderedByNetworks_Zeroes.pscalar.nii"
+  save_stats: "yes"
+  cluster_selection: "automatic"
+  use_all: "yes"
+  scheduler:
+    type: SLURM
+    cpu_mem: 16G
+    cpus: 1
+    partition: pi_anticevic
+    mail: samuel.brege@yale.edu
+    time: "02:00:00"
