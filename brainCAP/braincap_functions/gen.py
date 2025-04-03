@@ -12,8 +12,9 @@
 
 
 # Imports
-from pycap_functions.pycap_frameselection import *
-from pycap_functions.pycap_loaddata import *
+from braincap_functions.frameselection import *
+from braincap_functions.loaddata import *
+from braincap_functions.plots import plot_scree
 from kneed import KneeLocator
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.decomposition import PCA
@@ -27,8 +28,6 @@ import os
 import logging
 import nibabel as nib
 import numpy as np
-import matplotlib.pyplot as plt
-plt.switch_backend('agg')
 
 
 # ======================================================================
@@ -73,7 +72,7 @@ def clusterdata_any(inputdata, filein, param):
 
         for file in [P_outfilen, score_outfilen]:
             if os.path.exists(file):
-                logging.info(f"PyCap clustering file {file} found")
+                logging.info(f"braincap clustering file {file} found")
                 if overwrite == 'yes':
                     logging.info("    overwrite 'yes', existing file will be overwritten.")
                 else:
@@ -88,7 +87,7 @@ def clusterdata_any(inputdata, filein, param):
         try:
             cluster_func = getattr(sklearn.cluster, cluster_method)
         except:
-            raise pe.StepError(step="PyCap Clustering",
+            raise pe.StepError(step="braincap Clustering",
                                 error=f"Incompatible clustering method {cluster_method}! " \
                                 "Only functions in sklearn.cluster and sklearn.mixture are compatible.",
                                 action=f"Check sklearn documentation for compatible functions.\nCheck sklearn.cluster.{cluster_method} exists.")
@@ -98,7 +97,7 @@ def clusterdata_any(inputdata, filein, param):
             cluster_obj = cluster_func(**ind_args).fit(inputdata)
         except:
             logging.info(f"FAILED ARGUMENT DICT: {ind_args}")
-            raise pe.StepError(step="PyCap Clustering",
+            raise pe.StepError(step="braincap Clustering",
                             error=f"Failed adding cluster parameters for {cluster_method}!",
                             action="Check sklearn documentation for valid parameters.")
         
@@ -154,8 +153,8 @@ def determine_clusters(filein, param):
         logging.info("  KneeLocator failed, setting to largest value")
         final_k = max(cluster_args[c_var])
     else:
-        final_k = kl.elbow        
-        
+        final_k = kl.elbow
+    
     msg = f"The tested {c_var} values are " + str(cluster_args[c_var])
     logging.info(msg)
     msg = "The estimated scores are " + str(score_all)
@@ -163,7 +162,7 @@ def determine_clusters(filein, param):
     msg = f"The optimal {c_var} is determined as " + str(final_k) + "."
     logging.info(msg)
 
-    return final_k
+    return score_all, final_k
 
 def finalcluster2cap_any(inputdata, filein, param, final_k):
 
@@ -177,7 +176,7 @@ def finalcluster2cap_any(inputdata, filein, param, final_k):
     c_var = cluster_args.pop('_variable', None)
 
     indir = os.path.join(filein.outpath, cluster_method + "_runs_" + param.spdatatag)
-    outdir = os.path.join(filein.outpath, cluster_method + "_results_" + param.spdatatag)
+    outdir = filein.outpath #os.path.join(filein.outpath, "clustering_results_" + param.spdatatag)
 
     if not os.path.exists(outdir):
         os.makedirs(outdir)
@@ -243,18 +242,211 @@ def finalcluster2cap_any(inputdata, filein, param, final_k):
     # -----------------------------
     #     save output files
     # -----------------------------
-
-    P_outfilen1 = os.path.join(outdir,f"{param.tag}_{c_var}_" + str(final_k) + "_framelabel_clusterID.hdf5")
-    f = h5py.File(P_outfilen1, "w")
-    dset1 = f.create_dataset(
-        "framecluster", (P.shape[0],), dtype='int', data=P)
-    f.close()
-
-    P_outfilen2 = os.path.join(outdir,f"{param.tag}_{c_var}_" + str(final_k) + "_clustermean.hdf5")
+    P_outfilen2 = os.path.join(outdir,f"{param.tag}clustering_results_{param.spdatatag}.hdf5")
     f = h5py.File(P_outfilen2, "w")
-    dset1 = f.create_dataset("clmean", (max(P)+1, inputdata.shape[1]), dtype='float32', data=clmean)
+    f.create_dataset("cluster_means", (max(P)+1, inputdata.shape[1]), dtype='float32', data=clmean)
+    f.create_dataset(
+        "cluster_labels", (P.shape[0],), dtype='int', data=P)
     f.close()
     msg = "Saved cluster mean data matrix in " + P_outfilen2
     logging.info(msg)
 
     return P, clmean
+
+def create_basis_CAP(inputdata, n_clusters):
+
+    msg = "============================================"
+    logging.info(msg)
+    msg = "[ Hierarchical agglomerative clustering (Ward's algorithm) for the generation of a basis set of CAPs ] /n"
+    logging.info(msg)
+
+    # -------------------------------------------
+    # -   Perform Ward's algorithm using k
+    # -------------------------------------------
+    msg = "Apply hierarchical agglomerative clustering on the concatenated CAP data matrix (#clusters = " + str(
+        n_clusters) + ").."
+    logging.info(msg)
+
+    #allow other clustering? PCA?
+    hac = AgglomerativeClustering(
+        n_clusters=n_clusters, affinity='euclidean', linkage='ward')
+    P = hac.fit_predict(inputdata)
+
+    # ------------------------------------------
+    # -   Average frames within each cluster
+    # ------------------------------------------
+    y = 0
+    clmean = np.empty([max(P)+1, inputdata.shape[1]]) #IS THIS THE RIGHT SHAPE????
+    for x in range(0, max(P)+1):
+        index = np.where(P == x)  # Find the indices of time-frames belonging to a cluster x
+        y = y+np.size(index)  # Progress: cumulated number of time-frames assigned to any cluster
+        msg = "HAC cluster " + str(x) + ": averaging " + str(np.size(index)) + \
+            " frames in this cluster. (progress: " + str(y) + "/" + str(len(P)) + ")"
+        logging.info(msg)
+        cldata = inputdata[index, :]  # (n_time-points within cluster x space)
+        cluster_mean = cldata.mean(axis=1)  # (1 x space)
+        # Z-score transformation within each CAP
+        # cluster_z = stats.zscore(cluster_mean, nan_policy='omit') # (1 x space)
+        withincap_mean = cluster_mean.mean(axis=1)
+        withincap_std = cluster_mean.std(axis=1,ddof=1)
+        cluster_z = (cluster_mean - withincap_mean ) / withincap_std
+        msg = "within cap mean = " +  str(withincap_mean) + ", std = " + str(withincap_std)
+        logging.info(msg)
+        msg = "original cluster mean = " +str(cluster_mean.shape) + str(cluster_mean)
+        logging.info(msg)
+        msg = "Z-transformed cluster mean = " +str(cluster_z.shape) + str(cluster_z)
+        logging.info(msg)
+        clmean[x, :] = cluster_z
+
+        #Commented out until solved cap image saving
+        # if param.savecapimg == "y":
+        #     # - Save the averaged image within this cluster
+        #     outfilen = outdir + "HAC_cluster" + str(x) + "_Zmap.pscalar.nii"
+        #     pscalars = nib.load(pscalar_filen)
+        #     new_img = nib.Cifti2Image(cluster_z, header=pscalars.header,
+        #                               nifti_header=pscalars.nifti_header)
+        #     new_img.to_filename(outfilen)
+        #     msg = "HAC cluster " + str(x) + ": saved the average map in " + outfilen
+        #     logging.info(msg)
+        # elif param.savecapimg == "n":
+        #     msg = "HAC cluster " + str(x) + ": do not save the average map."
+        #     logging.info(msg)
+
+    # -----------------------------
+    #     save output files
+    # -----------------------------
+
+    # P_outfilen = outdir + "FINAL_k" + str(final_k) + "_flabel_clusterP.csv"
+    # df = pd.DataFrame(data=P.astype(float))
+    # df.to_csv(P_outfilen, sep=' ', header=False, float_format='%d', index=False)
+    # msg = "Saved cluster labels corresponding to frames in " + P_outfilen
+    # logging.info(msg)
+
+    #file saving should occur in main script
+
+    # P_outfilen1 = outdir + "FINAL_k" + str(final_k) + "_framelabel_HACclusterID.hdf5"
+    # f = h5py.File(P_outfilen1, "w")
+    # dset1 = f.create_dataset(
+    #     "framecluster", (P.shape[0],), dtype='int', data=P)
+    # f.close()
+
+    # P_outfilen2 = outdir + "FINAL_k" + str(final_k) + "_HACclustermean.hdf5"
+    # f = h5py.File(P_outfilen2, "w")
+    # dset1 = f.create_dataset("clmean", (max(P)+1, inputdata.shape[1]), dtype='float32', data=clmean)
+    # f.close()
+    # msg = "Saved HAC cluster mean data matrix in " + P_outfilen2
+    # logging.info(msg)
+
+    return P, clmean
+
+def reorder_R(R, savefilen):
+    # R is an n x m correlation matrx (e.g. # of test caps x # of basis caps)
+    # the goal is to re-order(re-label) n rows (test caps)
+    # to assign a cap index for test cap according to the similarity with basis caps
+    # Output: an n x m correlation matrix
+
+    if (R.shape[0] == R.shape[1]):
+
+        msg = "Re-label (re-order) rows of the correlation matrix by sorting test caps (rows) using spatial similarity to basis CAPs."
+        logging.info(msg)
+        sortcap_match = np.zeros((R.shape[1],))
+        for basis_c in np.arange(R.shape[1]):
+            sortcap = R[:, basis_c].argsort()
+            sortcap = sortcap[::-1]
+            sortcap_match[basis_c] = sortcap[0]
+        sortcap_match = np.int_(sortcap_match)
+        del sortcap
+
+        if np.array_equal(np.unique(sortcap_match), np.unique(np.arange(R.shape[1]))):
+            msg = "All test caps are sorted using spatial correlation (r) with basis CAPs."
+            logging.info(msg)
+        else:
+            msg = "There is one or more test caps that are assigned to more than 1 basis CAPs."
+            logging.info(msg)
+
+            # ovl_testcapID: Indeces of test caps that are assigned to more than 1 basis CAP
+            match, counts = np.unique(sortcap_match, return_counts=True)
+            if len(np.where(counts > 1)[0] == 1):
+                ovl_testcapID = match[np.where(counts > 1)[0]]
+
+            # Do following: if found one test CAP assigned to more than 1 basis CAP
+            # Goal: to compare actual r value of this test CAP with two basis CAPs
+            # and assign this test CAP to the basis CAP with higher r
+            if len(ovl_testcapID == 1):
+                # ovl_basiscapID: Indices of basis CAPs that have assigned to the same test cap
+                ovl_basiscapID = np.where(sortcap_match == ovl_testcapID)[0]
+                r_tocompare = R[ovl_testcapID, ovl_basiscapID]
+                keep_idx = ovl_basiscapID[np.where(r_tocompare == max(r_tocompare))[0]]
+                replace_idx = ovl_basiscapID[np.where(r_tocompare == min(r_tocompare))[0]]
+
+                msg = "R(testcap" + str(ovl_testcapID) + ", basiscap" + \
+                    str(ovl_basiscapID) + ")=" + str(r_tocompare)
+                logging.info(msg)
+                msg = "basiscap " + str(keep_idx) + \
+                    "should be matched to testcap " + str(ovl_testcapID) + "."
+                logging.info(msg)
+                msg = "basiscap " + str(replace_idx) + " should be matched to other testcap."
+                logging.info(msg)
+
+                missing_idx = np.array(list(set(np.arange(R.shape[1])).difference(match)))
+                msg = "Found a test cap without assignment : " + str(missing_idx)
+                logging.info(msg)
+
+                sortcap_match[replace_idx] = missing_idx
+
+        if np.array_equal(np.unique(sortcap_match), np.unique(np.arange(R.shape[1]))):
+            sorted_R = R[sortcap_match]
+            # f, ax = plt.subplots(figsize=(4, 8))
+            # plt.subplot(211)
+            # ax = sns.heatmap(R, annot=True, linewidths=.5, vmin=-1, vmax=1, cmap=rpal)
+            # plt.xlabel('basis CAPs')
+            # plt.ylabel('test CAPs')
+            # plt.subplot(212)
+            # ax = sns.heatmap(sorted_R, annot=True, linewidths=.5, vmin=-1, vmax=1, cmap=rpal)
+            # plt.xlabel('basis CAPs')
+            # plt.ylabel('Re-ordered test CAPs (new label)')
+            # # plt.show()
+            # if saveimgflag == 1:
+            #     plt.savefig(savefilen, bbox_inches='tight')
+            #     msg = "Saved " + savefilen
+            #     logging.info(msg)
+        else:
+            msg = "Cannot save " + savefilen + ": caps were not matched. " + str(sortcap_match)
+            logging.info(msg)
+
+    elif (R.shape[0] < R.shape[1]):
+
+        msg = "Re-label (re-order) rows of the correlation matrix by sorting test caps (rows) using spatial similarity to basis CAPs."
+        logging.info(msg)
+        sortcap_match = np.zeros((R.shape[0],))
+        for est_c in np.arange(R.shape[0]):
+            sortcap = R[est_c, :].argsort()
+            sortcap = sortcap[::-1]
+            sortcap_match[est_c] = sortcap[0]
+        sortcap_match = np.int_(sortcap_match)
+        del sortcap
+
+        if np.array_equal(np.unique(sortcap_match), np.unique(np.arange(R.shape[0]))):
+            sorted_R = np.zeros((R.shape))
+            for j in np.arange(R.shape[0]):
+                idx = sortcap_match[j]
+                sorted_R[idx, :] = R[j, :]
+            # f, ax = plt.subplots(figsize=(4, 8))
+            # plt.subplot(211)
+            # ax = sns.heatmap(R, annot=True, linewidths=.5, vmin=-1, vmax=1, cmap=rpal)
+            # plt.xlabel('basis CAPs')
+            # plt.ylabel('test CAPs')
+            # plt.subplot(212)
+            # ax = sns.heatmap(sorted_R, annot=True, linewidths=.5, vmin=-1, vmax=1, cmap=rpal)
+            # plt.xlabel('basis CAPs')
+            # plt.ylabel('Re-ordered test CAPs (new label)')
+            # # plt.show()
+            # if saveimgflag == 1:
+            #     plt.savefig(savefilen, bbox_inches='tight')
+            #     msg = "Saved " + savefilen
+            #     logging.info(msg)
+        else:
+            msg = "Cannot save " + savefilen + ": caps were not matched. " + str(sortcap_match)
+            logging.info(msg)
+
+    return sorted_R, sortcap_match
