@@ -23,13 +23,13 @@ def subsplit(filein, param):
     msg = "[Model selection] Population split-half of subjects.."
     logging.info(msg)
 
-    filein.sublistfull = filein.sublistfull
+    #filein.sublistfull = filein.sublistfull
     #splitdata_outfilen = filein.outdir + "subsplit_datalist.hdf5"
     splitdata_outfilen = os.path.join(filein.datadir, "sessions.hdf5")
     msg = splitdata_outfilen
     logging.info(msg)
-    
-    if os.path.exists(splitdata_outfilen):
+    logging.info(f"overwrite: {param.overwrite}")
+    if os.path.exists(splitdata_outfilen) and not param.overwrite:
 
         msg = "File exists. Load existing list of subjects for split_1/split_2 datasets: " + splitdata_outfilen
         logging.info(msg)
@@ -39,11 +39,15 @@ def subsplit(filein, param):
         split_2_sublist_idx = f['split_2_sublist_idx']
 
         split_2_sublist = []
+        split_2_grouplist = []
         for index in split_2_sublist_idx:
             split_2_sublist.append(filein.sublistfull[index])
+            split_2_grouplist.append(filein.groupsall[index])
         split_1_sublist = []
+        split_1_grouplist = []
         for index in split_1_sublist_idx:
             split_1_sublist.append(filein.sublistfull[index])
+            split_1_grouplist.append(filein.groupsall[index])
 
         msg = "(Split 1) split_1 data subjects " + \
             str(len(split_1_sublist)) + " : " + str(split_1_sublist)
@@ -63,12 +67,16 @@ def subsplit(filein, param):
 
         split_2_sublist_idx = split_2_sublist_idx.tolist()
         split_2_sublist = []
+        split_2_grouplist = []
         for index in split_2_sublist_idx:
             split_2_sublist.append(filein.sublistfull[index])
+            split_2_grouplist.append(filein.groupsall[index])
         split_1_sublist_idx = split_1_sublist_idx.tolist()
         split_1_sublist = []
+        split_1_grouplist = []
         for index in split_1_sublist_idx:
             split_1_sublist.append(filein.sublistfull[index])
+            split_1_grouplist.append(filein.groupsall[index])
 
 #         elif param.subsplit_type == "manual":
 #             split_1_sublist_idx = np.array(range(0, spsize, 1))
@@ -90,7 +98,7 @@ def subsplit(filein, param):
         msg = "Saved Subject split data list indices in " + splitdata_outfilen
         logging.info(msg)
 
-    return split_2_sublist, split_1_sublist
+    return split_2_sublist, split_1_sublist, split_2_grouplist, split_1_grouplist
 
 
 

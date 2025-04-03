@@ -1,5 +1,5 @@
 import logging
-import pycap_functions.pycap_exceptions as pe
+import braincap_functions.exceptions as pe
 import numpy as np
 import os
 
@@ -89,7 +89,7 @@ def id2index(to_convert, sublistfull):
     Convert subject ids to index of sublist. Used for h5py storage
     """
     converted = np.zeros(len(to_convert))
-    sublist = np.asarray(sublistfull)
+    sublist = np.asarray(sublistfull, dtype=str)
     to_convert = np.asarray(to_convert, dtype=str)
     for i in range(len(converted)):
         index = np.where(to_convert[i]==sublist)[0]

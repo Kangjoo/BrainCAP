@@ -18,10 +18,10 @@ import logging
 import os
 from scipy import stats
 from nilearn.masking import apply_mask
-import pycap_functions.pycap_exceptions as pe
+import braincap_functions.exceptions as pe
 import h5py
 import pandas as pd
-import pycap_functions.pycap_utils as utils
+import braincap_functions.utils as utils
 # from memory_profiler import profile
 # @profile
 
@@ -50,7 +50,7 @@ def build_groupdata(filein, param):
     info_list = []
     for idx, subID in enumerate(sublist):
         dataname = os.path.join(homedir, str(subID), fname)
-        #If data was concatenated using pycap_concatenate, dimensions are saved
+        #If data was concatenated using braincap_concatenate, dimensions are saved
         if os.path.exists(dataname + ".npy"):
             dshape = np.load(dataname + ".npy")
         #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
@@ -62,7 +62,7 @@ def build_groupdata(filein, param):
             sdim = dshape[1]
         else:
             if sdim != dshape[1]:
-                raise pe.StepError("PyCap Prep - load_groupdata",
+                raise pe.StepError("braincap Prep - load_groupdata",
                                    f"Different number of features for subject {subID}",
                                    "Compare this subject's data with other subjects")
             
@@ -105,6 +105,7 @@ def build_groupdata(filein, param):
 
     data_all = np.empty((tdim, sdim), dtype=np.float32)
     sublabel_all = np.empty((tdim, ), dtype=np.object_)
+    grouplabel_all = np.empty((tdim, ), dtype=np.object_)
     ptr = 0
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
@@ -141,6 +142,11 @@ def build_groupdata(filein, param):
         subid_v = [subID] * zdata.shape[0]
         subid_v = np.array(subid_v)
         sublabel_all[ptr:ptr+zdata.shape[0], ] = subid_v
+
+        # - Create group label
+        group_v = [filein.groups[idx]] * zdata.shape[0]
+        group_v = np.array(group_v)
+        grouplabel_all[ptr:ptr+zdata.shape[0], ] = group_v
         # - Update/delete variables
         ptr += zdata.shape[0]
 
@@ -148,12 +154,12 @@ def build_groupdata(filein, param):
             ", data:" + str(zdata.shape) + ", label:" + str(subid_v.shape)
         logging.info(msg)
 
-        del zdata, subid_v
+        del zdata, subid_v, group_v
 
     msg = ">> Output: a (" + str(data_all.shape[0]) + " x " + \
         str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
     logging.info(msg)
-    return data_all, sublabel_all, seeddata_all
+    return data_all, sublabel_all, seeddata_all, grouplabel_all
 
 def create_groupdata(filein, param):
     """
@@ -171,9 +177,9 @@ def create_groupdata(filein, param):
 
     msg = "Loading individual whole-brain fMRI data."
     logging.info(msg)
-    data_all, sublabel_all, seeddata_all = build_groupdata(filein=filein, param=param)
+    data_all, sublabel_all, seeddata_all, grouplabel_all = build_groupdata(filein=filein, param=param)
     logging.info("Load success!")
-    return data_all, sublabel_all, seeddata_all
+    return data_all, sublabel_all, seeddata_all, grouplabel_all
 
 def load_groupdata(filein, param):
     filein.groupdata_wb_filen = os.path.join(filein.datadir, param.tag + param.spdatatag + ".hdf5")
@@ -181,13 +187,14 @@ def load_groupdata(filein, param):
         f = h5py.File(filein.groupdata_wb_filen, 'r')
         data_all = np.array(f['data_all'])
         sublabel_all = utils.index2id(np.array(f['sublabel_all']), filein.sublistfull)
+        grouplabel_all = utils.index2id(np.array(f['grouplabel_all']), filein.groupsall)
     except Exception as e:
         logging.info(e)
         raise pe.StepError(step="Load concatenated data",
                            error="Cannot load data",
-                           action=f"Check prep_pycap outputs: {filein.datadir}")
+                           action=f"Check prep_braincap outputs: {filein.datadir}")
 
-    return data_all, sublabel_all
+    return data_all, sublabel_all, grouplabel_all
 
 def load_groupdata_motion(filein, param):
     # load motion parameters estimated using QuNex
@@ -233,7 +240,7 @@ def load_groupdata_motion(filein, param):
                     m_file = pd.read_csv(motion_data_filen, header=None, sep=sep)
                     m_data_ind = m_file.to_numpy()
             except:
-                raise pe.StepError(step="PyCap prep - frameselection",
+                raise pe.StepError(step="braincap prep - frameselection",
                                    error=f'Failed to open motion file {motion_data_filen}',
                                    action="Only compatible with .bstats, .tsv, .csv, or line-seperated single column data." \
                                     "If you have multiple columns, please specify 'motion_type'")
@@ -343,8 +350,8 @@ def parse_sfile(sessionsfile):
     if 'group' in s_df.columns:
         groups = s_df['group'].to_list()
     else:
-        logging.info("No group labels supplied")
-        groups = [None] * len(sessions)
+        logging.info("No group labels supplied, using index")
+        groups = list(range(len(sessions)))
     
     return sessions, groups
 
