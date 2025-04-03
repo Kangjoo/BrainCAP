@@ -129,9 +129,7 @@ for session, group in zip(slist, groups):
         info_df['label'] = conc_labels
         info_df.to_csv(info_path, index=False)
         logging.info(f"        File {conc_path} created!")
-
-
-    del conc, conc_labels, group_list, id_list
+        del conc, conc_labels, group_list, id_list
 
     if conc_motion:
         logging.info(f"        Running motion concatenation...")

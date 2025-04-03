@@ -110,7 +110,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublistfull, filein.groups = parse_sfile(args.sessions_list)
+filein.sublistfull, filein.groupsall = parse_sfile(args.sessions_list)
 
 
 if '|' in args.permutation:
@@ -143,7 +143,7 @@ for split in permutations:
         msg = "Start processing " + param.spdatatag + "..."
         logging.info(msg)
 
-        data_all_fsel, sublabel_all_fsel = load_groupdata(filein, param)
+        data_all_fsel, sublabel_all_fsel, grouplabel_all_fsel = load_groupdata(filein, param)
 
         msg = "    >> np.unique(sublabel_all_fsel) : " + str(np.unique(sublabel_all_fsel))
         logging.info(msg)

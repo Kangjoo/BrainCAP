@@ -152,7 +152,7 @@ class FileIn:
 
 filein = FileIn()
 filein.sessions_folder = args.sessions_folder
-filein.sublistfull, filein.groups = parse_sfile(args.sessions_list)
+filein.sublistfull, filein.groupsall = parse_sfile(args.sessions_list)
 #filein.pscalar_filen = args.pscalarfile.name
 
 filein.fname = args.bold_path
@@ -178,7 +178,7 @@ for split_i in range(args.permutations):
     # - Population split-half list of subjects
     # -------------------------------------------
 
-    split_2_sublist, split_1_sublist = subsplit(filein=filein, param=param)
+    split_2_sublist, split_1_sublist, split_2_grouplist, split_1_grouplist = subsplit(filein=filein, param=param)
 
     # -------------------------------------------
     # - Run the whole process for split_1 and split_2 datasets
@@ -187,9 +187,12 @@ for split_i in range(args.permutations):
         if sp == 1:
             param.spdatatag = "split1"
             filein.sublist = split_1_sublist
+            filein.groups = split_1_grouplist
+
         elif sp == 2:
             param.spdatatag = "split2"
             filein.sublist = split_2_sublist
+            filein.groups = split_2_grouplist
 
         msg = "============================================"
         logging.info(msg)
@@ -202,7 +205,7 @@ for split_i in range(args.permutations):
         # - Load a time by space data matrix from individual and temporally concatenate
         # -------------------------------------------
 
-        data_all, sublabel_all, seeddata_all = create_groupdata(filein=filein, param=param)
+        data_all, sublabel_all, seeddata_all, groups_all = create_groupdata(filein=filein, param=param)
         msg = "    >> session ids : " + str(np.unique(sublabel_all))
         logging.info(msg)
 
@@ -210,8 +213,8 @@ for split_i in range(args.permutations):
         # - Frame-selection to find the moments of activation
         # -------------------------------------------
 
-        data_all_fsel, sublabel_all_fsel = prep_scrubbed(
-            inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, filein=filein, param=param)
+        data_all_fsel, sublabel_all_fsel, groups_all_fsel = prep_scrubbed(
+            inputdata=data_all, labeldata=sublabel_all, seeddata=seeddata_all, groupdata=groups_all, filein=filein, param=param)
 
         msg = "    >> np.unique(sublabel_all_fsel) : " + str(np.unique(sublabel_all_fsel))
         logging.info(msg)
@@ -219,7 +222,7 @@ for split_i in range(args.permutations):
         # -------------------------------------------
         # - Delete variable to save space
         # -------------------------------------------
-        del data_all, sublabel_all, data_all_fsel, sublabel_all_fsel
+        del data_all, sublabel_all, data_all_fsel, sublabel_all_fsel, groups_all_fsel
         # if param.seed_based == "yes":
         #     del seeddata_all
 
