@@ -171,7 +171,7 @@ for split_i in range(args.permutations):
         #c_vals[split_i][sp-1] = determine_clusters(filein, param)
         score_all, final_k = determine_clusters(filein, param)
 
-        plot_scree(param.cluster_args[c_var], score_all, c_var, final_k, os.path.join(filein.fig_folder, f"{c_var}_scree_{sp}.png")) #ADD PERM AND SPLIT
+        plot_scree(param.cluster_args[c_var], score_all, c_var, final_k, os.path.join(filein.fig_folder, f"{c_var}_scree_perm{split}_{sp}.png"))
     
         c_vals[sp-1].append(final_k)
 
