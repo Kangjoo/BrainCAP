@@ -101,6 +101,8 @@ filein.sublistfull, filein.groupsall = parse_sfile(args.sessions_list)
 
 basis_dir = os.path.join(args.analysis_folder, f"basis_CAPs")
 
+#one basis CAP file per split
+
 for sp in [1, 2]:
     if sp == 1:
         param.spdatatag = "split1"
@@ -113,6 +115,7 @@ for sp in [1, 2]:
     logging.info("Basis CAP shape")
     logging.info(basis_data.shape)
 
+    #Individual files per permutation if using. Reordered to use basis CAPs
     for perm_i in range(args.permutations):
         perm = perm_i + 1
         logging.info(f"Perm{perm}")
@@ -124,6 +127,9 @@ for sp in [1, 2]:
         r_labels = np.array(r_f["cluster_labels"])
         logging.info("Reorded cluster labels shape")
         logging.info(r_labels.shape)
+        #Subject IDs are saved as indices of the sessions_list using utils.id2index
+        #   Same with Groups
+        #index2id takes these indices and returns the relevant subject ID from the list
         r_sublabels = utils.index2id(np.array(r_f["sublabel_all"]), filein.sublistfull)
         logging.info("Reorded subject labels shape")
         logging.info(r_sublabels.shape)
@@ -131,3 +137,19 @@ for sp in [1, 2]:
         logging.info("Reorded group labels shape")
         logging.info(r_grouplabels.shape)
 
+
+## ADD CODE HERE ##
+
+#OUTPUT
+out_dir = os.path.join(args.analysis_folder, "temporal_metrics") 
+os.makedirs(out_dir, exist_ok=True)
+fig_dir = os.path.join(out_dir, "figures") #For figures from this step
+os.makedirs(fig_dir, exist_ok=True)
+out_path = os.path.join(out_dir, f"{args.tag}temporal_metrics.hdf5") #If saving file per split, change to f"{args.tag}temporal_metrics_split{sp}.hdf5"
+
+f = h5py.File(out_path, 'w')
+## ADD CODE HERE ##
+#Example of how to save subject IDs and Groups (if using in next steps)
+#f.create_dataset("sublabel_all", (sublabel_all_fsel.shape[0],), dtype='int', data=utils.id2index(sublabel_all_fsel,filein.sublistfull))
+#f.create_dataset("grouplabel", (group_all_fsel.shape[0],), dtype='int', data=utils.id2index(group_all_fsel,filein.groupsall))
+f.close()
