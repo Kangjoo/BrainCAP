@@ -4,6 +4,8 @@ The analysis of moment-to-moment changes in co-activation patterns (CAPs) in fun
 
 This repository serves as the `main` branch for the ongoing development and enhancement of BrainCAP. 
 
+![BrainCAP workflow](https://github.com/Kangjoo/BrainCAP/blob/main/images/fig1_workflow.png "fig1_workflow")
+
 ---
 
 ## Important Notes
@@ -41,3 +43,11 @@ BrainCAP is currently maintained by:
   Email: [samuel.brege@yale.edu](mailto:samuel.brege@yale.edu)
 
 For inquiries, questions, or collaborations, please contact either maintainer.
+
+---
+
+## Pipeline
+
+We presetned BrainCAP and our demo codes at the software demonstration session of the 2025 meeting of the Organizaiton for Human Brain Mapping (OHBM) in Brisbane, Australia. Find the overview of the BrainCAP pipeline below.
+
+![BrainCAP Pipeline](https://github.com/Kangjoo/BrainCAP/blob/main/images/fig2_pipeline.png "fig2_pipeline")
