@@ -61,6 +61,7 @@ parser.add_argument("--sessions_list", required=True, help="Path to list of sess
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
 parser.add_argument("--tag", default="", help="Tag for saving files, useful for doing multiple analyses in the same folder (Optional).")
+parser.add_argument("--metrics", default="FA|mDT|vDT", help="Metrics to compute as a pipe '|' separated list, possible options: [FA|mDT|vDT|FO|DT|TP|CON|Ent].")
 #parser.add_argument("--bold_type", default=None, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
 
 
@@ -93,6 +94,10 @@ param = Param()
 #     param.bold_type = args.bold_type
 param.tag = args.tag
 param.overwrite = overwrite
+
+param.metrics = args.metrics.split('|')
+
+logging.info(f"Running metrics {param.metrics}")
 
 class FileIn:
     pass
@@ -251,11 +256,27 @@ out_dir = os.path.join(args.analysis_folder, "temporal_metrics")
 os.makedirs(out_dir, exist_ok=True)
 fig_dir = os.path.join(out_dir, "figures") #For figures from this step
 os.makedirs(fig_dir, exist_ok=True)
-out_path = os.path.join(out_dir, f"{args.tag}temporal_metrics.hdf5") #If saving file per split, change to f"{args.tag}temporal_metrics_split{sp}.hdf5"
+out_path_avg = os.path.join(out_dir, f"{args.tag}temporal_metrics_avg.hdf5") #If saving file per split, change to f"{args.tag}temporal_metrics_split{sp}.hdf5"
+out_path = os.path.join(out_dir, f"{args.tag}temporal_metrics.hdf5")
 
-#f = h5py.File(out_path, 'w')
-#f.create_dataset("grouplabel", (metrics_ind_allcap_allperm.shape[0],), dtype='int', data=metrics_ind_allcap_allperm)
-#f.close()
+f = h5py.File(out_path, 'w')
+for col in metrics_ind_allcap_allperm.columns:
+    #String values like SubID need to be converted to int before saving
+    if col == "subID":
+        f.create_dataset(col, (metrics_ind_allcap_allperm.shape[0],), dtype='int', data=utils.id2index(metrics_ind_allcap_allperm[col].to_numpy(), filein.sublistfull))
+    else:
+        f.create_dataset(col, (metrics_ind_allcap_allperm.shape[0],), dtype=metrics_ind_allcap_allperm[col].dtype, data=metrics_ind_allcap_allperm[col].to_numpy())
+f.close()
+
+f = h5py.File(out_path_avg, 'w')
+for col in metrics_ind_allcap_allperm_avg.columns:
+    #String values like SubID need to be converted to int before saving
+    if col == "subID":
+        f.create_dataset(col, (metrics_ind_allcap_allperm_avg.shape[0],), dtype='int', data=utils.id2index(metrics_ind_allcap_allperm_avg[col].to_numpy(), filein.sublistfull))
+    else:
+        f.create_dataset(col, (metrics_ind_allcap_allperm_avg.shape[0],), dtype=metrics_ind_allcap_allperm_avg[col].dtype, data=metrics_ind_allcap_allperm_avg[col].to_numpy())
+f.close()
 
 logging.info("Saved data in " + out_path)
+logging.info("Saved average data in " + out_path)
 logging.info("Completed.")
