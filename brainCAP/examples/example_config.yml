@@ -38,6 +38,7 @@ concatenate_bolds:
   overwrite: "no"
   ndummy: 100
   bold_labels: [2,1,3,4]
+  
   scheduler:
     type: SLURM
     cpu_mem: 16G
