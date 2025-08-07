@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-#source activate /gpfs/gibbs/pi/n3/software/env/pycap_env
 
 import subprocess
 import os
@@ -11,8 +10,22 @@ from pathlib import Path
 import argparse
 import pprint
 import yaml
-import braincap_functions.exceptions as be
-from braincap_functions.utils import dict2string
+
+def dict2string(to_convert):
+    """
+    Converts a dict to a CLI friendly string
+    """
+    #uses " for CLI parsing
+    out = '"'
+    for key,val in to_convert.items():
+        #list denoted by pipe
+        if isinstance(val, list): val = '|'.join(map(str,val))
+        out += f'{key}={val},'
+    #Remove unneccesary comma
+    out = out[:-1]
+    out += '"'
+    return out
+
 
 def file_path(path):
     """

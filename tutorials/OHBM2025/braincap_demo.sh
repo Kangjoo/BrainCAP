@@ -17,28 +17,26 @@ export PATH="${REPO_DIR}/brainCAP:$PATH"
 #Source the brainCAP environment
 source activate ${ENV_DIR}/brainCAP
 
-${REPO_DIR}/brainCAP/braincap.py \
+
+
+braincap.py \
     --config="${REPO_DIR}/tutorials/OHBM2025/braincap_demo.yaml" \
     --steps="concatenate_bolds" \
     --dryrun="yes" 
 
-${REPO_DIR}/brainCAP/braincap.py \
+braincap.py \
     --config="${REPO_DIR}/tutorials/OHBM2025/braincap_demo.yaml" \
-    --steps="prep" \
-    --dryrun="yes" 
+    --steps="prep" 
 
-${REPO_DIR}/brainCAP/braincap.py \
+braincap.py \
     --config="${REPO_DIR}/tutorials/OHBM2025/braincap_demo.yaml" \
-    --steps="clustering" \
-    --dryrun="yes" 
+    --steps="clustering" 
 
-${REPO_DIR}/brainCAP/braincap.py \
+braincap.py \
     --config="${REPO_DIR}/tutorials/OHBM2025/braincap_demo.yaml" \
-    --steps="post" \
-    --dryrun="yes" 
+    --steps="post" 
 
-
-${REPO_DIR}/brainCAP/braincap.py \
+braincap.py \
     --config="${REPO_DIR}/tutorials/OHBM2025/braincap_demo.yaml" \
     --steps="concatenate_bolds,prep,clustering,post" \
-    --dryrun="yes" 
+    --dryrun=yes

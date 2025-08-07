@@ -93,10 +93,10 @@ def id2index(to_convert, sublistfull):
     to_convert = np.asarray(to_convert, dtype=str)
     for i in range(len(converted)):
         index = np.where(to_convert[i]==sublist)[0]
-        if len(index) != 1:
-            raise pe.StepError(step="Session list parsing",
-                               error=f"Found session {to_convert[i]} {len(index)} times in sessions list!",
-                               action="Session list and loaded data may not match, check your parameters")
+        # if len(index) != 1:
+        #     raise pe.StepError(step="Session list parsing",
+        #                        error=f"Found session {to_convert[i]} {len(index)} times in sessions list!",
+        #                        action="Session list and loaded data may not match, check your parameters")
         converted[i] = index[0]
     return converted
 

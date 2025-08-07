@@ -269,7 +269,7 @@ def create_basis_CAP(inputdata, n_clusters):
 
     #allow other clustering? PCA?
     hac = AgglomerativeClustering(
-        n_clusters=n_clusters, affinity='euclidean', linkage='ward')
+        n_clusters=n_clusters, metric='euclidean', linkage='ward')
     P = hac.fit_predict(inputdata)
 
     # ------------------------------------------
@@ -291,11 +291,11 @@ def create_basis_CAP(inputdata, n_clusters):
         withincap_std = cluster_mean.std(axis=1,ddof=1)
         cluster_z = (cluster_mean - withincap_mean ) / withincap_std
         msg = "within cap mean = " +  str(withincap_mean) + ", std = " + str(withincap_std)
-        logging.info(msg)
+        #logging.info(msg)
         msg = "original cluster mean = " +str(cluster_mean.shape) + str(cluster_mean)
-        logging.info(msg)
+        #logging.info(msg)
         msg = "Z-transformed cluster mean = " +str(cluster_z.shape) + str(cluster_z)
-        logging.info(msg)
+        #logging.info(msg)
         clmean[x, :] = cluster_z
 
         #Commented out until solved cap image saving

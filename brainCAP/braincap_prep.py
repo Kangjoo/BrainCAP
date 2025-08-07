@@ -88,7 +88,7 @@ logging.getLogger('').addHandler(console)
 
 logging.info("BrainCAP Clusteing - Prep Start")
 #Wait for a moment so run_pycap.py log tracking can keep up
-time.sleep(1)
+time.sleep(3)
 
 # -------------------------------------------
 #           Setup input parameters
@@ -124,7 +124,7 @@ else:
     param.bold_type = args.bold_type
 
 if not args.seed_args:
-    param.seed_args == None
+    param.seed_args = None
 else:
     param.seed_args = utils.string2dict(args.seed_args)
 

@@ -299,7 +299,6 @@ for sp in [1, 2]:
 
         clmean = cluster_means[sp-1,perm_i*n_clusters:perm*n_clusters,:]
         corr_matrix = np.corrcoef(clmean,basis_cap)[0:n_clusters,n_clusters:]
-
         sorted_R, sortcap_match = reorder_R(corr_matrix, 'test')
 
         c_results_f = os.path.join(split_dir,f"{param.tag}clustering_results_{param.spdatatag}.hdf5")

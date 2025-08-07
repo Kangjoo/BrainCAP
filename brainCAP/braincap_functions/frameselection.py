@@ -198,6 +198,7 @@ def frameselection_motion(filein, param, sublist, inputdata):
         # - Select all frames
         indTlen = int(np.shape(inputdata)[0] / len(sublist))
         flag_scrubbed = np.ones((indTlen, len(sublist)), dtype=bool)
+        motion_metric = None
 
     # - Concatenate individual flags
     for n_sub in range(0, len(sublist)):
