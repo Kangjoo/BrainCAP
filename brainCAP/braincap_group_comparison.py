@@ -109,20 +109,48 @@ temporal_dir = os.path.join(args.analysis_folder, f"temporal_metrics")
 #     elif sp == 2:
 #         param.spdatatag = "split2"
 
+#Load all perm data
 temporal_path = os.path.join(temporal_dir, f"{args.tag}temporal_metrics.hdf5")
 f = h5py.File(temporal_path, 'r')
+metrics_ind_allcap_allperm = pd.DataFrame()
+for col in f.keys():
+    #String values like subID need to be converted from int before loading
+    if col == "subID":
+        metrics_ind_allcap_allperm[col] = utils.index2id(np.array(f[col]), filein.sublistfull)
+        #f.create_dataset(col, (metrics_ind_allcap_allperm.shape[0],), dtype='int', data=utils.id2index(metrics_ind_allcap_allperm[col].to_numpy(), filein.sublistfull))
+    else:
+        metrics_ind_allcap_allperm[col] = np.array(f[col])
+        #f.create_dataset(col, (metrics_ind_allcap_allperm.shape[0],), dtype=metrics_ind_allcap_allperm[col].dtype, data=metrics_ind_allcap_allperm[col].to_numpy())
+f.close()
 
-## ADD CODE HERE FOR LOADING DATA ##
+#Adding group label
+metrics_ind_allcap_allperm['group'] = np.asarray(filein.groupsall)[[np.where(np.asarray(filein.sublistfull) == sub)[0][0] for sub in metrics_ind_allcap_allperm['subID']]]
 
-#Example of how to load subject IDs and Groups (if saved in temporal metrics)
-# sublabels = utils.index2id(np.array(f["sublabel_all"]), filein.sublistfull)
-# logging.info("Subject labels shape")
-# logging.info(sublabels.shape)
-# grouplabels = utils.index2id(np.array(f["grouplabel"]), filein.groupsall)
-# logging.info("Group labels shape")
-# logging.info(grouplabels.shape)
+print(metrics_ind_allcap_allperm.head())
 
-## ADD CODE HERE ##
+
+
+#Load all perm data
+temporal_avg_path = os.path.join(temporal_dir, f"{args.tag}temporal_metrics_avg.hdf5")
+f = h5py.File(temporal_avg_path, 'r')
+metrics_ind_allcap_allperm_avg = pd.DataFrame()
+for col in f.keys():
+    #String values like subID need to be converted from int before loading
+    if col == "subID":
+        metrics_ind_allcap_allperm_avg[col] = utils.index2id(np.array(f[col]), filein.sublistfull)
+        #f.create_dataset(col, (metrics_ind_allcap_allperm.shape[0],), dtype='int', data=utils.id2index(metrics_ind_allcap_allperm[col].to_numpy(), filein.sublistfull))
+    else:
+        metrics_ind_allcap_allperm_avg[col] = np.array(f[col])
+        #f.create_dataset(col, (metrics_ind_allcap_allperm.shape[0],), dtype=metrics_ind_allcap_allperm[col].dtype, data=metrics_ind_allcap_allperm[col].to_numpy())
+f.close()
+
+#Adding group label
+metrics_ind_allcap_allperm_avg['group'] = np.asarray(filein.groupsall)[[np.where(np.asarray(filein.sublistfull) == sub)[0][0] for sub in metrics_ind_allcap_allperm_avg['subID']]]
+
+print(metrics_ind_allcap_allperm_avg.head())
+
+
+
 
 #OUTPUT
 out_dir = os.path.join(args.analysis_folder, "group_comparison")
@@ -132,4 +160,5 @@ os.makedirs(fig_dir, exist_ok=True)
 
 out_path = os.path.join(out_dir, f"{args.tag}group_comparison.hdf5") #If saving file per split, change to f"{args.tag}group_comparison_split{sp}.hdf5"
 f = h5py.File(out_path, 'w')
+f.close()
 
