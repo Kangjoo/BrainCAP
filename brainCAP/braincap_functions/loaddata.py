@@ -67,7 +67,7 @@ def build_groupdata(filein, param):
                                    "Compare this subject's data with other subjects")
             
         #Load info data for building and group and labeldata file
-        info_path = f"{dataname.split('.')[0]}_info.csv"
+        info_path = f"{os.path.splitext(dataname)[0]}_info.csv"
         logging.info(info_path)
         if os.path.exists(info_path):
             logging.info(f"session info data found at: {info_path}, loading...")

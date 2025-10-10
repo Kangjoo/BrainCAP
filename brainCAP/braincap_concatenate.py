@@ -98,7 +98,7 @@ for session, group in zip(slist, groups):
     logging.info(bolds_string)
     logging.info(f"        Running bold concatenation...")
     conc_path = os.path.join(args.sessions_folder, session, args.bold_out)
-    info_path = os.path.join(args.sessions_folder, session, f"{args.bold_out.split('.')[0]}_info.csv")
+    info_path = os.path.join(args.sessions_folder, session, f"{os.path.splitext(args.bold_out)[0]}_info.csv")
     if os.path.exists(conc_path):
         logging.info(f"           Warning: Existing concatenated bold file found")
         if args.overwrite.lower() == 'yes':
