@@ -27,7 +27,7 @@ To clone the Anaconda environment, use
 The `main` branch contains the latest developments and optimizations for BrainCAP. These codes are optimized for local use on the Yale University High-Performance Computing (HPC) cluster. If you are looking to reproduce the data and results from Lee et al. (2024), please refer to the archived version on Zenodo linked above.
 
 ### `develop`
-The `develop` branch focuses on building an open-source software toolkit for BrainCAP. We aim to release the first version of this open-source toolkit by the end of **2025**. Contributions, feedback, and collaboration are welcome to help shape the future of BrainCAP.
+The `develop` branch focuses on building an open-source software toolkit for BrainCAP. We aim to release the first version of this open-source toolkit by the end of **2026**. Contributions, feedback, and collaboration are welcome to help shape the future of BrainCAP.
 
 ---
 
