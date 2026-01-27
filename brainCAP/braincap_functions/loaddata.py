@@ -33,6 +33,8 @@ def build_groupdata(filein, param):
     unit = param.unit
     mask_file = param.mask_file
     seed_args = param.seed_args
+    bold_type = param.bold_type
+
     if not seed_args:
         seed_based = None
     else:
@@ -55,7 +57,11 @@ def build_groupdata(filein, param):
             dshape = np.load(dataname + ".npy")
         #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
         else:
-            dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
+            if bold_type == "NIFTI":
+                full_shape = nib.load(dataname).get_fdata(dtype=np.float32).shape
+                dshape = (full_shape[-1], full_shape[0] * full_shape[1] * full_shape[2])
+            else:
+                dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
             np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
         tdim += dshape[0]
         if sdim == 0:
@@ -112,6 +118,9 @@ def build_groupdata(filein, param):
         dataname = os.path.join(homedir, str(subID), fname)
         data = nib.load(dataname).get_fdata(dtype=np.float32)
 
+        if bold_type == "NIFTI":
+            data = utils.flatten_nifti(data)
+
         if seed_based:
             if seed_t == "file":
                 if param.bold_type == "CIFTI":
@@ -133,7 +142,7 @@ def build_groupdata(filein, param):
             else:
                 data = apply_mask(data, mask)
 
-        zdata = stats.zscore(data, axis=0)
+        zdata = utils.zscore(data, bold_type)
 
         data_all[ptr:ptr+zdata.shape[0], :] = zdata
 
@@ -159,6 +168,7 @@ def build_groupdata(filein, param):
     msg = ">> Output: a (" + str(data_all.shape[0]) + " x " + \
         str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
     logging.info(msg)
+
     return data_all, sublabel_all, seeddata_all, grouplabel_all
 
 def create_groupdata(filein, param):

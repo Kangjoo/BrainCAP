@@ -2,6 +2,7 @@ import logging
 import braincap_functions.exceptions as pe
 import numpy as np
 import os
+from scipy import stats
 
 def handle_args(args, req_args, step=None, param=None):
     bad_arg = _check_args(args, req_args)
@@ -137,3 +138,26 @@ def get_seedtype(seed):
                            action="seed must be a file, index, or list of indices")
 
     return seed_t
+
+def flatten_nifti(nifti):
+    #Flatten NIFTI into CIFTI-like format, row = frame
+    return nifti.reshape(-1, nifti.shape[-1]).T
+
+def unflatten_nifti(flat_nifti, nifti_shape):
+    #Unflatten NIFTI back into nifti_shape
+    return flat_nifti.T.reshape((nifti_shape[0],nifti_shape[1],nifti_shape[2],-1))
+
+def zscore(data, bold_type):
+    if bold_type == "CIFTI":
+        return stats.zscore(data, axis=0)
+    #Nifti images can have all-zero voxels which are incompatible
+    #Input Nifti data should be flattened
+    elif bold_type == "NIFTI":
+        valid = np.where(np.mean(data, axis=0) != 0)
+        z = stats.zscore(data[:, valid[0]], axis=0)
+        data[:, valid[0]] = z
+        return data
+    else:
+        raise pe.StepError(step="Z-score",
+                           error=f"No bold_type assigned!",
+                           action="Set --bold_type to NIFTI or CIFTI")
