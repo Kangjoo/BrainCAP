@@ -33,9 +33,6 @@ def build_groupdata(filein, param):
     unit = param.unit
     mask_file = param.mask_file
     seed_args = param.seed_args
-
-    cifti = param.bold_type == "CIFTI"
-
     if not seed_args:
         seed_based = None
     else:
@@ -49,31 +46,29 @@ def build_groupdata(filein, param):
     
     #set up dimensions for subject concatenated array
     tdim = 0
-    sdim = None
+    sdim = 0
     info_list = []
     for idx, subID in enumerate(sublist):
         dataname = os.path.join(homedir, str(subID), fname)
         #If data was concatenated using braincap_concatenate, dimensions are saved
         if os.path.exists(dataname + ".npy"):
             dshape = np.load(dataname + ".npy")
-        #Otherwise, must load file and get dim directly. Processing inefficient but should be more memory efficient
+        #Otherwise, must load file and get dim directly. Processing inefficent but should be more memory efficient
         else:
             dshape = nib.load(dataname).get_fdata(dtype=np.float32).shape
             np.save(dataname + ".npy", dshape) #Save shape so this only has to be done once
-        
-        tdim += dshape[0] if cifti else dshape[-1]
-        sdim_check = dshape[1] if cifti else dshape[:-1]
-        
-        if not np.all(sdim):
-            sdim = sdim_check
+        tdim += dshape[0]
+        if sdim == 0:
+            sdim = dshape[1]
         else:
-            if np.any(sdim_check != sdim):
+            if sdim != dshape[1]:
                 raise pe.StepError("braincap Prep - load_groupdata",
                                    f"Different number of features for subject {subID}",
                                    "Compare this subject's data with other subjects")
             
         #Load info data for building and group and labeldata file
         info_path = f"{os.path.splitext(dataname)[0]}_info.csv"
+        logging.info(info_path)
         if os.path.exists(info_path):
             logging.info(f"session info data found at: {info_path}, loading...")
             info_list.append(pd.read_csv(info_path))
@@ -108,27 +103,14 @@ def build_groupdata(filein, param):
     else:
         seeddata_all = None
 
-    
-    if cifti:
-        #CIFTI 2D
-        data_all = np.empty((tdim, sdim), dtype=np.float32)
-    else:
-        #NIFTI 4D
-        data_all = np.empty([tdim] + list(sdim), dtype=np.float32)
-
+    data_all = np.empty((tdim, sdim), dtype=np.float32)
     sublabel_all = np.empty((tdim, ), dtype=np.object_)
     grouplabel_all = np.empty((tdim, ), dtype=np.object_)
     ptr = 0
-
     for idx, subID in enumerate(sublist):
         # - Load fMRI data
         dataname = os.path.join(homedir, str(subID), fname)
-        if cifti:
-            #CIFTI, time-axis = 0
-            data = nib.load(dataname).get_fdata(dtype=np.float32)
-        else:
-            #NIFTI, time-axis = -1, must be moved
-            data = np.moveaxis(nib.load(dataname).get_fdata(dtype=np.float32), -1, 0)
+        data = nib.load(dataname).get_fdata(dtype=np.float32)
 
         if seed_based:
             if seed_t == "file":
@@ -153,7 +135,7 @@ def build_groupdata(filein, param):
 
         zdata = stats.zscore(data, axis=0)
 
-        data_all[ptr:ptr+zdata.shape[0]] = zdata
+        data_all[ptr:ptr+zdata.shape[0], :] = zdata
 
 
         # - Create subject label
@@ -175,7 +157,7 @@ def build_groupdata(filein, param):
         del zdata, subid_v, group_v
 
     msg = ">> Output: a (" + str(data_all.shape[0]) + " x " + \
-        str(sdim) + ") array of (group concatenated time-series x space)."
+        str(data_all.shape[1]) + ") array of (group concatenated time-series x space)."
     logging.info(msg)
     return data_all, sublabel_all, seeddata_all, grouplabel_all
 

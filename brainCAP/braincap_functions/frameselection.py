@@ -92,7 +92,7 @@ def prep_scrubbed(inputdata, labeldata, seeddata, groupdata, filein, param):
         labeldata_fsel = labeldata[tuple(flag_all_idx)]
         groupdata_fsel = groupdata[tuple(flag_all_idx)]
         msg = ">> Output: a (" + str(inputdata_fsel.shape[0]) + " x " + str(
-            inputdata_fsel.shape[1:]) + ") array of (selected time-frames x space)."
+            inputdata_fsel.shape[1]) + ") array of (selected time-frames x space)."
         logging.info(msg)
 
         # ------------------------------------------------------------------------
@@ -103,7 +103,7 @@ def prep_scrubbed(inputdata, labeldata, seeddata, groupdata, filein, param):
         dset1 = f.create_dataset(
             "sublabel_all", (labeldata_fsel.shape[0],), dtype='int', data=utils.id2index(labeldata_fsel,filein.sublistfull))
         dset2 = f.create_dataset(
-            "data_all", dtype='float32', data=inputdata_fsel)
+            "data_all", (inputdata_fsel.shape[0],inputdata_fsel.shape[1]), dtype='float32', data=inputdata_fsel)
         f.create_dataset("grouplabel_all", (groupdata_fsel.shape[0],), dtype='int', data=utils.id2index(groupdata_fsel,filein.groupsall))
         f.close()
         msg = "Saved subject and group labels corresponding to selected frames in " + labeldata_fsel_outfilen
