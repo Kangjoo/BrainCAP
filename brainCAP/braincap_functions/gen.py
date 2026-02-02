@@ -94,12 +94,14 @@ def clusterdata_any(inputdata, filein, param):
         
         #attempt to load specified parameters
         try:
-            cluster_obj = cluster_func(**ind_args).fit(inputdata)
-        except:
+            cluster_obj = cluster_func(**ind_args)
+        except Exception as e:
             logging.info(f"FAILED ARGUMENT DICT: {ind_args}")
             raise pe.StepError(step="braincap Clustering",
-                            error=f"Failed adding cluster parameters for {cluster_method}!",
+                            error=f"Failed adding cluster parameters for {cluster_method}! \nError: {e}",
                             action="Check sklearn documentation for valid parameters.")
+        
+        cluster_obj = cluster_obj.fit(inputdata)
         
         P = cluster_obj.predict(inputdata)
         score = silhouette_score(inputdata, cluster_obj.labels_)
