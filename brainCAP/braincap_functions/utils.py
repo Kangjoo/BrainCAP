@@ -153,8 +153,11 @@ def zscore(data, bold_type):
     #Nifti images can have all-zero voxels which are incompatible
     #Input Nifti data should be flattened
     elif bold_type == "NIFTI":
+        logging.info("Removing all-zero voxels...")
         valid = np.where(np.mean(data, axis=0) != 0)
+        logging.info(f"{valid[0].shape} voxels remaining")
         z = stats.zscore(data[:, valid[0]], axis=0)
+        logging.info(f"{z}")
         data[:, valid[0]] = z
         return data
     else:
