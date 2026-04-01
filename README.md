@@ -36,13 +36,19 @@ The specific version of the code used for Lee et al. (2024) is archived and avai
 
 BrainCAP is currently maintained by:
 
-- **Kangjoo Lee, PhD**  
-  Email: [kangjoo.lee@yale.edu](mailto:kangjoo.lee@yale.edu)
+- **Kangjoo Lee, PhD**
+  Assistant Professor, Department of Biomedical Engineering
+  Director, Computational Neuroimaging of Brain Disorders Laboratory
+  College of Engineering and Computing
+  Florida International University
+  10555 W Flagler St, EC 2675, Miami, FL 33174
+  Phone: (305) 348-7340
+  Email: [kalee@fiu.edu](mailto:kalee@fiu.edu)
 
-- **Samuel Brege, Postgraduate Associate**  
+- **Samuel Brege, BS, Research Assistant**  
   Email: [samuel.brege@yale.edu](mailto:samuel.brege@yale.edu)
 
-For inquiries, questions, or collaborations, please contact either maintainer.
+For inquiries, questions, or collaborations, please contact Dr. Lee
 
 ---
 
