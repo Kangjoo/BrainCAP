@@ -2,16 +2,9 @@
 
 The analysis of moment-to-moment changes in co-activation patterns (CAPs) in functional MRI (fMRI) has been useful for studying dynamic properties of neural activity. This method is based on clustering fMRI time-frames into several recurrent spatial patterns within and across subjects. Studies have also focused on quantifying properties of the temporal organization of CAPs, such as fractional occupancy and dwell time. The analyses of co-activations are computationally intensive, requiring the clustering of high-dimensional data concatenated over subjects. Further, while a variety of analytic choices are involved in studying CAPs, the field lacks a unified open-source platform to allow a robust feature selection required for reproducible mappings of brain and behavioral measurements. We are currently developing **BrainCAP**, an open-source Python-based toolkit for quantifying CAPs from fMRI data in cross-sectional and longitudinal studies. 
 
-This repository serves as the `develop` branch for the ongoing development and enhancement of BrainCAP. 
-
-See `brainCAP/examples` for example code.
-
-To clone the Anaconda environment, use 
-`conda env create -f environment_linux.yml`
+This repository serves as the `main` branch for the ongoing development and enhancement of BrainCAP. 
 
 ![BrainCAP workflow](https://github.com/Kangjoo/BrainCAP/blob/main/images/fig1_workflow.png "fig1_workflow")
-
-
 
 ---
 
@@ -27,7 +20,7 @@ To clone the Anaconda environment, use
 The `main` branch contains the latest developments and optimizations for BrainCAP. These codes are optimized for local use on the Yale University High-Performance Computing (HPC) cluster. If you are looking to reproduce the data and results from Lee et al. (2024), please refer to the archived version on Zenodo linked above.
 
 ### `develop`
-The `develop` branch focuses on building an open-source software toolkit for BrainCAP. We aim to release the first version of this open-source toolkit by the end of **2026**. Contributions, feedback, and collaboration are welcome to help shape the future of BrainCAP.
+The `develop` branch focuses on building an open-source software toolkit for BrainCAP. We aim to release the first version of this open-source toolkit by the end of **2025**. Contributions, feedback, and collaboration are welcome to help shape the future of BrainCAP.
 
 ---
 
@@ -61,4 +54,3 @@ For inquiries, questions, or collaborations, please contact Dr. Lee.
 We presetned BrainCAP and our demo codes at the software demonstration session of the 2025 meeting of the Organizaiton for Human Brain Mapping (OHBM) in Brisbane, Australia. Find the overview of the BrainCAP pipeline below.
 
 ![BrainCAP Pipeline](https://github.com/Kangjoo/BrainCAP/blob/main/images/fig2_pipeline.png "fig2_pipeline")
-
