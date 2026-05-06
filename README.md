@@ -45,10 +45,7 @@ Florida International University<br>
 Phone: (305) 348-7340<br>
 Email: [kalee@fiu.edu](mailto:kalee@fiu.edu)
 
-- **Samuel Brege, BS, Research Assistant**  
-  Email: [samuel.brege@yale.edu](mailto:samuel.brege@yale.edu)
-
-For inquiries, questions, or collaborations, please contact Dr. Lee
+For inquiries, questions, or collaborations, please contact Dr. Lee.
 
 ---
 
