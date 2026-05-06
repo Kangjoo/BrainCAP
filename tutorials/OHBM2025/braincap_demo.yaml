@@ -1,0 +1,41 @@
+global: #Parameters applicable to all steps, overwritten if specified in the step
+  sessions_folder: "/Users/sab322/brainCAP_demo/connectome_sessions"
+  analysis_folder: "/Users/sab322/brainCAP_demo/demo_output"
+  sessions_list: "/Users/sab322/brainCAP_demo/sessions_demo.csv"
+  logs_folder: "/Users/sab322/brainCAP_demo/logs"
+  overwrite: "yes"
+  #Clustering/shared arguments 
+  permutations: 1
+  bold_type: CIFTI #CIFTI, NIFTI
+
+  cluster_args:
+    _method: KMeans #All sklearn.cluster methods
+    _variable: n_clusters
+    n_clusters: [4,5]
+    n_init: 10
+    max_iter: 1000
+  
+concatenate_bolds:
+  bold_files: 
+    - "bold2.ptseries.nii"
+    - "bold1.ptseries.nii"
+  bold_out: "bold21_concatenated.ptseries.nii"
+  overwrite: "no"
+  ndummy: 100
+  bold_labels: [2,1]
+
+prep:
+  scrubbing: "no"
+  gsr: "yes"
+  bold_path: "bold21_concatenated.ptseries.nii"
+  overwrite: "yes"
+
+clustering:
+  overwrite: "yes"
+
+post:
+  overwrite: "yes"
+  save_image: "no"
+  save_stats: "no"
+  cluster_selection: 4
+  use_all: "yes"

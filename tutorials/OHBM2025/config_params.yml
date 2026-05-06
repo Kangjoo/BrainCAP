@@ -1,0 +1,78 @@
+#Parameters applicable to all steps, overwritten if specified in the step
+global: 
+  #Core arguments
+  sessions_folder: #Required by all steps, folder containing each session's data
+  analysis_folder: #Required by all steps except 'concatenate_bolds', analysis output folder
+  sessions_list: #Required by all steps, .csv file with a column named 'session_id' listing all sessions to analyze. Can also specify a 'Group' column
+  logs_folder: #Required by all steps, where to output logs
+
+  #Other shared arguments that users will want to be the same between steps
+  permutations: #Default 1, Number of permutations to run
+  tag: #Optional, users can specify a string tag to be appended to all output file names in case users are running multiple analyses in the same folder
+  bold_type: #Required [CIFTI, NIFTI]
+  mask: #Optional, absolute file path to a NIFTI/CIFTI mask file, must match bold_type. (Sidenote. not sure what other formats masks come in)
+
+  #other shared arguments that users may not want to be the same between steps
+  overwrite: #yes or no. If used in 'prep', using 'no' will load existing prep outputs, useful for changing things like scrubbing parameters without re-concatinating data
+  scheduler: #Scheduler arguments. Requirements differ so recommended to assign under each step
+    type: #Default NONE, options are [SLURM, NONE]. If using NONE, below parameters will not apply. Otherwise, they are required.
+    cpu_mem: #Memory to assign each cpu
+    cpus: #Number of cpus to assign
+    partition: #Partition name
+    mail: #Email address to send job notifications 
+    time: #Time to run the job
+    account: #If using a different account, Optionala
+
+#Parameters for concatenate_bolds, output (eg. bold_out) should match input for prep (eg. bold_path)
+concatenate_bolds: 
+  bold_files: #Required, list of bold files to concatenate. Must be local paths from each sessions folder in the 'sessions_folder'
+    - #Local bold path 1
+    - #Local bold path 2
+  bold_out: #Required, output concatenated bold file. Will be placed inside each sessions folder
+  motion_files: #Optional, list of movement files to concatenate if doing scrubbing. Can be QuNex .bstats or .csv/txt files. Same rules as 'bold_files'
+    - #Local movement path 1
+    - #Local mvoement path 2
+  motion_out: #Required, output concatenated movement file. Will be placed inside each sessions folder
+  ndummy: #Number of dummy frames to remove from the beginning of each bold and movement file
+  bold_labels: #Optional, list of labels to assign each bold. Must match the number of bold_files if supplied
+
+#Parameters for prep, build concatenated data files in analysis folder, as well as frameselection
+prep:
+  scrubbing: #Default 'no', Run movement scrubbing [yes, no]. NOTE: all 'yes'/'no' arguments will also accept bool (eg. True, False, y, n, YES, NO)
+  gsr: #Default 'yes', Run gsr [yes, no]
+  bold_path: #Required, Local path inside each sessions folder to the input bold file
+  motion_type: #Optional. If running scrubbing and there are multiple columns in your movement file or using .bstats, this can be used to specify which stat to use.
+  motion_path: #Required if running scrubbing, local path to session's movement file.
+  motion_threshold: #Required if running scrubbing, threshold. Any numeric value
+  display_motion: #Default no, whether to create movement data plots
+  seed_args: #Optional, arguments for running seed based analysis
+    seed_based: yes #Default 'no', [yes, no] whether to run seed based analysis
+    seed: #Required if running seed_based, either a parcel index, list of indices, or a mask file specifying your ROI
+    threshold_type: #Required if running seed_based, [T, P] whether to run absolute thresholding T, or percentag thresholding P. Should change this
+    threshold: #Required if running seed_based, signal threshold based on type
+    event_type: #Requried if running seed_based, [activation, deactivation] whether it should be above or below threshold
+  time_threshold: #Default 100, random Time Signal threshold
+
+#Parameters for clustering, runs sklearn clustering using prep outputs
+clustering:
+  #Cluster arguments, required by 'clustering' and 'post'
+  cluster_args:
+    _method: #Required, must exactly match a sklearn.cluster method
+    _variable: #Required, specify the parameter you wish to compare and parallelize over. eg. for KMeans it would be 'n_clusters'
+    #Cluster _method parameters. Must exactly match the sklearn.cluster method's parameters
+    n_clusters: #Example parameter for 'KMeans' method
+    n_init: #Example parameter for 'KMeans' method
+    max_iter: #Example parameter for 'KMeans' method
+
+#Parameters for post, compares clustering outputs for different values and finds best one using Knee location
+post:
+  save_image: #Default no, [yes,no] whether to save final CAP image
+  parc_file: #Required if save_image 'yes', absolute path to the parcellation template used when parcellating data
+  save_stats: #Whether to generate histograms of cluster-values across runs
+  cluster_selection: #Specify which cluster _variable value to use. By default runs as 'automatic', which will use the mose common value determined by silhouette score
+  use_all: #Whether to
+  #post only requires _method and _variable. Best specified under 'global' but can be specified in the step if running multiple analyses
+  #Ideally specified under 'global', adding here to show the different between clustering and post requirements
+  cluster_args: #Only _method and _variable are needed, but other values can be specified: they just won't be used
+    _method: #Required, must exactly match a sklearn.cluster method
+    _variable: #Required, specify the parameter you wish to compare and parallelize over. eg. for KMeans it would be 'n_clusters'
