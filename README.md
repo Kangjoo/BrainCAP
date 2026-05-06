@@ -9,7 +9,7 @@ This repository serves as the `main` branch for the ongoing development and enha
 ---
 
 ## Important Notes
-1. The official release of BrainCAP has not been announced yet. The developer team is working on the first release of BrainCAP.
+1. The official release of BrainCAP has not been announced yet. **Following Dr. Lee's transition from Yale to Florida International University, this package will be re-branded, re-organized and validated as a new independent project.**
 2. The current version of this repository is specifically tailored for research environments with access to Yale University’s High Performance Computing (HPC) cluster. Future versions will allow the use of various job schedulers, in addition to Slurm.
 
 ---
@@ -20,7 +20,7 @@ This repository serves as the `main` branch for the ongoing development and enha
 The `main` branch contains the latest developments and optimizations for BrainCAP. These codes are optimized for local use on the Yale University High-Performance Computing (HPC) cluster. If you are looking to reproduce the data and results from Lee et al. (2024), please refer to the archived version on Zenodo linked above.
 
 ### `develop`
-The `develop` branch focuses on building an open-source software toolkit for BrainCAP. We aim to release the first version of this open-source toolkit by the end of **2025**. Contributions, feedback, and collaboration are welcome to help shape the future of BrainCAP.
+The `develop` branch focuses on building an open-source software toolkit for BrainCAP after the pulibcaion of Lee et al. PLOS Biology (2024). Contributions, feedback, and collaboration are welcome to help shape the future of BrainCAP.
 
 ---
 
