@@ -46,8 +46,8 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
-        return path
+    if utils.is_local_path(path):
+        return utils.normalize_local_path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
@@ -132,4 +132,3 @@ os.makedirs(fig_dir, exist_ok=True)
 
 out_path = os.path.join(out_dir, f"{args.tag}feature_reduction.hdf5") #If saving file per split, change to f"{args.tag}feature_reduction_split{sp}.hdf5"
 f = h5py.File(out_path, 'w')
-

@@ -48,8 +48,8 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
-        return path
+    if utils.is_local_path(path):
+        return utils.normalize_local_path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
@@ -61,7 +61,7 @@ parser.add_argument("--sessions_list", required=True, help="Path to list of sess
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
 parser.add_argument("--tag", default="", help="Tag for saving files, useful for doing multiple analyses in the same folder (Optional).")
-parser.add_argument("--metrics", default="FA|mDT|vDT", help="Metrics to compute as a pipe '|' separated list, possible options: [FA|mDT|vDT|FO|DT|TP|CON|Ent].")
+parser.add_argument("--metrics", default="FA|mDT|vDT", help="Metrics to compute as a pipe '|' separated list. Supported options: [FA|mDT|vDT].")
 #parser.add_argument("--bold_type", default=None, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
 
 
@@ -96,6 +96,13 @@ param.tag = args.tag
 param.overwrite = overwrite
 
 param.metrics = args.metrics.split('|')
+unsupported_metrics = set(param.metrics) - {'FA', 'mDT', 'vDT'}
+if unsupported_metrics:
+    parser.error(
+        "Unsupported metrics requested: "
+        + ", ".join(sorted(unsupported_metrics))
+        + ". Supported options are FA, mDT, and vDT."
+    )
 
 logging.info(f"Running metrics {param.metrics}")
 
@@ -186,7 +193,8 @@ for perm_i in range(args.permutations):
                 # Compute Total Accupancy of this CAP for each subject
                 sidx = np.where(capstate == subj_id)[0]
                 d = np.array([[len(sidx)]])
-                d = d / totTR * 100 # Divide by the total number of frames 
+                subject_frame_count = np.count_nonzero(r_sublabels == subj_id)
+                d = d / subject_frame_count * 100 if subject_frame_count else 0.0
                 fa_ind = np.append(fa_ind, d, axis=0)
                 
                 
@@ -195,7 +203,7 @@ for perm_i in range(args.permutations):
                 cap_seq = r_labels[sidx] #array of cluster labels from this subject
                 cap_mask = (cap_seq == i).astype(int)  # 1 if the frame belongs to CAP i, else 0
                 
-                logging.info("     Subject " + subj_id + " has " + str(len(cap_seq)) + " time-frames with CAP labels.")
+                logging.info("     Subject " + str(subj_id) + " has " + str(len(cap_seq)) + " time-frames with CAP labels.")
                 is_continuous = np.all(np.diff(sidx) == 1)
                 if is_continuous:
                     logging.info("     - QC PASSED: sidx contains a continuous sequence of indices.")

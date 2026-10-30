@@ -2,6 +2,7 @@
 
 import subprocess
 import os
+import sys
 import time
 import logging
 import copy
@@ -10,6 +11,7 @@ from pathlib import Path
 import argparse
 import pprint
 import yaml
+import braincap_functions.exceptions as pe
 
 def dict2string(to_convert):
     """
@@ -108,11 +110,12 @@ arg_dict = {'required':
 
 #Dict containing script paths for each step
 script_path = os.path.dirname(os.path.realpath(__file__))
-step_dict = {'concatenate_bolds':f'{script_path}/braincap_concatenate.py',
-             'prep':f'{script_path}/braincap_prep.py',
-             'clustering':f'{script_path}/braincap_clustering.py',
-             'post':f'{script_path}/braincap_post.py',
-             'temporal_metrics':f'{script_path}/braincap_post.py'}
+step_dict = {
+    'concatenate_bolds': os.path.join(script_path, 'braincap_concatenate.py'),
+    'prep': os.path.join(script_path, 'braincap_prep.py'),
+    'clustering': os.path.join(script_path, 'braincap_clustering.py'),
+    'post': os.path.join(script_path, 'braincap_post.py'),
+}
 
 schedulers = ['NONE','SLURM']
 
@@ -290,7 +293,7 @@ for step in args['steps']:
 
 
 
-        command += f"python {step_dict[step]} "
+        command += f'"{sys.executable}" "{step_dict[step]}" '
 
         for arg in arg_dict['required'][step]:
             if arg not in step_args.keys():

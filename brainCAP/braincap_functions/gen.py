@@ -103,7 +103,16 @@ def clusterdata_any(inputdata, filein, param):
         
         cluster_obj = cluster_obj.fit(inputdata)
         
-        P = cluster_obj.predict(inputdata)
+        if hasattr(cluster_obj, "predict"):
+            P = cluster_obj.predict(inputdata)
+        elif hasattr(cluster_obj, "labels_"):
+            P = cluster_obj.labels_
+        else:
+            raise pe.StepError(
+                step="braincap Clustering",
+                error=f"Clustering method {cluster_method} does not expose labels or predict().",
+                action="Use a scikit-learn clustering estimator with labels_ or predict().",
+            )
         score = silhouette_score(inputdata, cluster_obj.labels_)
         score = np.atleast_1d(score)
 

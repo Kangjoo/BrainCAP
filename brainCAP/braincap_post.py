@@ -47,8 +47,8 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
-        return path
+    if utils.is_local_path(path):
+        return utils.normalize_local_path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
@@ -63,7 +63,7 @@ parser.add_argument("--parc_file", type=file_path, required=False ,help="Path to
 parser.add_argument("--overwrite", type=str, default="no", help='Whether to overwrite existing data')
 parser.add_argument("--log_path", default='./prep_run_hcp.log', help='Path to output log', required=False)
 parser.add_argument("--mask", default=None, help="Brain mask, required for dense data and saving CAP image.")
-parser.add_argument("--bold_type", default=None, help="BOLD data type (CIFTI/NIFTI), if not supplied will use file extention")
+parser.add_argument("--bold_type", required=True, help="BOLD data type (CIFTI/NIFTI)")
 parser.add_argument("--cluster_args", type=str, required=True, help="Args for sklearn clustering in form 'key1=val1,key2=val2'. " \
                     "Must have key '_method', corresponding to a function in sklearn.clustering")
 parser.add_argument("--tag", default="", help="Tag for saving files, useful for doing multiple analyses in the same folder (Optional).")
@@ -104,10 +104,7 @@ class Param:
 param = Param()
 
 param.mask = args.mask
-if not args.bold_type:
-    param.bold_type = utils.get_bold_type(args.bold_path)
-else:
-    param.bold_type = args.bold_type
+param.bold_type = args.bold_type
 
 param.tag = args.tag
 
@@ -154,7 +151,7 @@ for split_i in range(args.permutations):
     split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
     filein.outpath = split_dir
-    filein.datadir = os.path.join(split_dir, "data/")
+    filein.datadir = os.path.join(split_dir, "data")
     param.overwrite = args.overwrite
     # -------------------------------------------
     # - Population split-half list of subjects
@@ -203,7 +200,7 @@ for split_i in range(args.permutations):
     split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
     filein.outpath = split_dir
-    filein.datadir = os.path.join(split_dir, "data/")
+    filein.datadir = os.path.join(split_dir, "data")
     param.overwrite = args.overwrite
     # -------------------------------------------
     # - Population split-half list of subjects
@@ -295,7 +292,7 @@ for sp in [1, 2]:
         perm = perm_i + 1
         split_dir = os.path.join(args.analysis_folder, f"perm{perm}")
         #filein.outpath = split_dir
-        filein.datadir = os.path.join(split_dir, "data/")
+        filein.datadir = os.path.join(split_dir, "data")
 
         clmean = cluster_means[sp-1,perm_i*n_clusters:perm*n_clusters,:]
         corr_matrix = np.corrcoef(clmean,basis_cap)[0:n_clusters,n_clusters:]
@@ -308,8 +305,8 @@ for sp in [1, 2]:
         reordered_labels = np.empty_like(labels)
 
         for i, c in enumerate(sortcap_match):
-            reordered_clmean[i] = reordered_clmean[c]
-            reordered_labels[np.where(labels==i)] = c
+            reordered_clmean[i] = clmean[c]
+            reordered_labels[np.where(labels == c)] = i
 
         data_all_fsel, sublabel_all_fsel, group_all_fsel = load_groupdata(filein, param)
 

@@ -1,0 +1,67 @@
+2026-10-30 15:08:11,775 - BrainCAP Clustering - Post Start
+2026-10-30 15:08:12,780 - No group labels supplied, using index
+2026-10-30 15:08:12,781 - Running permutation 1
+2026-10-30 15:08:12,816 - [array(0.03872986), array(0.04004857)]
+2026-10-30 15:08:12,817 - The tested n_clusters values are [4, 5]
+2026-10-30 15:08:12,818 - The estimated scores are [array(0.03872986), array(0.04004857)]
+2026-10-30 15:08:12,818 - The optimal n_clusters is determined as 4.
+2026-10-30 15:08:13,158 - [array(0.03265841), array(0.02698697)]
+2026-10-30 15:08:13,159 - WARNING: Unable to locate Knee! For best results, please use a wider range of values!
+2026-10-30 15:08:13,159 -   KneeLocator failed, setting to largest value
+2026-10-30 15:08:13,159 - The tested n_clusters values are [4, 5]
+2026-10-30 15:08:13,160 - The estimated scores are [array(0.03265841), array(0.02698697)]
+2026-10-30 15:08:13,160 - The optimal n_clusters is determined as 5.
+2026-10-30 15:08:13,338 - Running permutation 1
+2026-10-30 15:08:13,338 - ============================================
+2026-10-30 15:08:13,338 - Start processing split1...
+2026-10-30 15:08:13,342 - ============================================
+2026-10-30 15:08:13,342 - [KMeans clustering based CAP generation]
+2026-10-30 15:08:13,342 - Running with cluster variable: n_clusters and the following args:
+2026-10-30 15:08:13,342 - {'n_clusters': [4, 5], 'n_init': 10, 'max_iter': 1000}
+2026-10-30 15:08:13,342 - Load the results from KMeans clustering on the concatenated data matrix (n_clusters = 4)..
+2026-10-30 15:08:13,360 - (1612, 718)
+2026-10-30 15:08:13,360 - (1612,)
+2026-10-30 15:08:13,361 - cluster 0: averaging 283 frames in this cluster. (progress: 283/1612)
+2026-10-30 15:08:13,363 - cluster 1: averaging 341 frames in this cluster. (progress: 624/1612)
+2026-10-30 15:08:13,365 - cluster 2: averaging 429 frames in this cluster. (progress: 1053/1612)
+2026-10-30 15:08:13,367 - cluster 3: averaging 559 frames in this cluster. (progress: 1612/1612)
+2026-10-30 15:08:13,373 - Saved cluster mean data matrix in D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\braincap\perm1\clustering_results_split1.hdf5
+2026-10-30 15:08:13,373 - 
+
+2026-10-30 15:08:13,373 - Warning: ideal cluster value is for perm1 split2 is 5, but selected value is 4
+2026-10-30 15:08:13,374 - --use_all set to 'yes', using perm1 anyway!
+2026-10-30 15:08:13,374 - ============================================
+2026-10-30 15:08:13,374 - Start processing split2...
+2026-10-30 15:08:13,377 - ============================================
+2026-10-30 15:08:13,377 - [KMeans clustering based CAP generation]
+2026-10-30 15:08:13,378 - Running with cluster variable: n_clusters and the following args:
+2026-10-30 15:08:13,378 - {'n_clusters': [4, 5], 'n_init': 10, 'max_iter': 1000}
+2026-10-30 15:08:13,378 - Load the results from KMeans clustering on the concatenated data matrix (n_clusters = 4)..
+2026-10-30 15:08:13,393 - (1632, 718)
+2026-10-30 15:08:13,393 - (1632,)
+2026-10-30 15:08:13,393 - cluster 0: averaging 399 frames in this cluster. (progress: 399/1632)
+2026-10-30 15:08:13,395 - cluster 1: averaging 515 frames in this cluster. (progress: 914/1632)
+2026-10-30 15:08:13,398 - cluster 2: averaging 276 frames in this cluster. (progress: 1190/1632)
+2026-10-30 15:08:13,400 - cluster 3: averaging 442 frames in this cluster. (progress: 1632/1632)
+2026-10-30 15:08:13,404 - Saved cluster mean data matrix in D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\braincap\perm1\clustering_results_split2.hdf5
+2026-10-30 15:08:13,404 - 
+
+2026-10-30 15:08:13,404 - ============================================
+2026-10-30 15:08:13,405 - [ Hierarchical agglomerative clustering (Ward's algorithm) for the generation of a basis set of CAPs ] /n
+2026-10-30 15:08:13,405 - Apply hierarchical agglomerative clustering on the concatenated CAP data matrix (#clusters = 4)..
+2026-10-30 15:08:13,415 - HAC cluster 0: averaging 1 frames in this cluster. (progress: 1/4)
+2026-10-30 15:08:13,422 - HAC cluster 1: averaging 1 frames in this cluster. (progress: 2/4)
+2026-10-30 15:09:17,914 - HAC cluster 2: averaging 1 frames in this cluster. (progress: 3/4)
+2026-10-30 15:09:17,921 - HAC cluster 3: averaging 1 frames in this cluster. (progress: 4/4)
+2026-10-30 15:09:17,940 - Re-label (re-order) rows of the correlation matrix by sorting test caps (rows) using spatial similarity to basis CAPs.
+2026-10-30 15:09:17,940 - All test caps are sorted using spatial correlation (r) with basis CAPs.
+2026-10-30 15:09:17,966 - ============================================
+2026-10-30 15:09:17,966 - [ Hierarchical agglomerative clustering (Ward's algorithm) for the generation of a basis set of CAPs ] /n
+2026-10-30 15:09:17,966 - Apply hierarchical agglomerative clustering on the concatenated CAP data matrix (#clusters = 4)..
+2026-10-30 15:09:17,967 - HAC cluster 0: averaging 1 frames in this cluster. (progress: 1/4)
+2026-10-30 15:09:17,974 - HAC cluster 1: averaging 1 frames in this cluster. (progress: 2/4)
+2026-10-30 15:09:17,980 - HAC cluster 2: averaging 1 frames in this cluster. (progress: 3/4)
+2026-10-30 15:09:17,986 - HAC cluster 3: averaging 1 frames in this cluster. (progress: 4/4)
+2026-10-30 15:09:17,994 - Re-label (re-order) rows of the correlation matrix by sorting test caps (rows) using spatial similarity to basis CAPs.
+2026-10-30 15:09:17,994 - All test caps are sorted using spatial correlation (r) with basis CAPs.
+2026-10-30 15:09:18,020 - --- STEP COMPLETE ---

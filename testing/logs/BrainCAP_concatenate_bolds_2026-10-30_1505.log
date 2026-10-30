@@ -1,0 +1,50 @@
+2026-10-30 15:05:40,067 - BrainCAP concatenation start
+2026-10-30 15:05:41,072 - No group labels supplied, using index
+2026-10-30 15:05:41,072 - --motion_files not supplied, skipping motion concatenation
+2026-10-30 15:05:41,073 - Beginning bold concatenation for sessions in D:\__ACADEMICS__\PhD\Research\braincap\BrainCAP\testing\sessions_test.csv...
+2026-10-30 15:05:41,073 -     Processing ses-func01
+2026-10-30 15:05:41,073 - ses-func01
+2026-10-30 15:05:41,073 - ['sub-MSC01_{session_id}_task-rest_desc-preproc_parcellated.ptseries.nii']
+2026-10-30 15:05:41,073 -         Searching for files:
+2026-10-30 15:05:41,073 - D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func01\sub-MSC01_ses-func01_task-rest_desc-preproc_parcellated.ptseries.nii
+2026-10-30 15:05:41,074 -         Running bold concatenation...
+2026-10-30 15:05:42,825 -         File D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func01\sub-MSC01_ses-func01_task-rest_desc-preproc_parcellated_concatenated.ptseries.nii created!
+2026-10-30 15:05:42,827 -         ses-func01 concatenated sucessfully
+
+2026-10-30 15:05:42,827 -     Processing ses-func02
+2026-10-30 15:05:42,828 - ses-func02
+2026-10-30 15:05:42,828 - ['sub-MSC01_{session_id}_task-rest_desc-preproc_parcellated.ptseries.nii']
+2026-10-30 15:05:42,828 -         Searching for files:
+2026-10-30 15:05:42,828 - D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func02\sub-MSC01_ses-func02_task-rest_desc-preproc_parcellated.ptseries.nii
+2026-10-30 15:05:42,828 -         Running bold concatenation...
+2026-10-30 15:05:44,513 -         File D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func02\sub-MSC01_ses-func01_task-rest_desc-preproc_parcellated_concatenated.ptseries.nii created!
+2026-10-30 15:05:44,514 -         ses-func02 concatenated sucessfully
+
+2026-10-30 15:05:44,514 -     Processing ses-func03
+2026-10-30 15:05:44,514 - ses-func03
+2026-10-30 15:05:44,514 - ['sub-MSC01_{session_id}_task-rest_desc-preproc_parcellated.ptseries.nii']
+2026-10-30 15:05:44,514 -         Searching for files:
+2026-10-30 15:05:44,514 - D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func03\sub-MSC01_ses-func03_task-rest_desc-preproc_parcellated.ptseries.nii
+2026-10-30 15:05:44,515 -         Running bold concatenation...
+2026-10-30 15:05:46,079 -         File D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func03\sub-MSC01_ses-func01_task-rest_desc-preproc_parcellated_concatenated.ptseries.nii created!
+2026-10-30 15:05:46,081 -         ses-func03 concatenated sucessfully
+
+2026-10-30 15:05:46,081 -     Processing ses-func04
+2026-10-30 15:05:46,081 - ses-func04
+2026-10-30 15:05:46,081 - ['sub-MSC01_{session_id}_task-rest_desc-preproc_parcellated.ptseries.nii']
+2026-10-30 15:05:46,082 -         Searching for files:
+2026-10-30 15:05:46,082 - D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func04\sub-MSC01_ses-func04_task-rest_desc-preproc_parcellated.ptseries.nii
+2026-10-30 15:05:46,082 -         Running bold concatenation...
+2026-10-30 15:05:47,577 -         File D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func04\sub-MSC01_ses-func01_task-rest_desc-preproc_parcellated_concatenated.ptseries.nii created!
+2026-10-30 15:05:47,579 -         ses-func04 concatenated sucessfully
+
+2026-10-30 15:05:47,579 -     Processing ses-func05
+2026-10-30 15:05:47,579 - ses-func05
+2026-10-30 15:05:47,579 - ['sub-MSC01_{session_id}_task-rest_desc-preproc_parcellated.ptseries.nii']
+2026-10-30 15:05:47,580 -         Searching for files:
+2026-10-30 15:05:47,580 - D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func05\sub-MSC01_ses-func05_task-rest_desc-preproc_parcellated.ptseries.nii
+2026-10-30 15:05:47,580 -         Running bold concatenation...
+2026-10-30 15:05:49,071 -         File D:\__RESEARCH__\PhD\dFC\fmriprep_out\preproc_MSC_smooth_parcel_out\sub-MSC01\ses-func05\sub-MSC01_ses-func01_task-rest_desc-preproc_parcellated_concatenated.ptseries.nii created!
+2026-10-30 15:06:52,821 -         ses-func05 concatenated sucessfully
+
+2026-10-30 15:06:52,821 - --- STEP COMPLETE ---

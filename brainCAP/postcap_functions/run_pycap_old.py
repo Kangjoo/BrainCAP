@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 import argparse
+import ntpath
 
 def remove_directory_tree(start_directory: Path):
     """Recursively and permanently removes the specified directory, all of its
@@ -35,7 +36,7 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
+    if path and not os.path.isabs(path) and not ntpath.isabs(path):
         return path
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_dir!")

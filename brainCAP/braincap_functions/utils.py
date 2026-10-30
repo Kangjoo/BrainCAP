@@ -2,6 +2,7 @@ import logging
 import braincap_functions.exceptions as pe
 import numpy as np
 import os
+import ntpath
 from scipy import stats
 
 def handle_args(args, req_args, step=None, param=None):
@@ -34,6 +35,27 @@ def get_bold_type(bold):
         return "NIFTI"
     else:
         return None
+
+def is_local_path(path):
+    """
+    Return whether a path is relative on both POSIX and Windows systems.
+
+    Windows-style paths may be supplied while running on another platform,
+    so both platform-specific path implementations are checked.
+    """
+    if not isinstance(path, str) or not path:
+        return False
+    return not os.path.isabs(path) and not ntpath.isabs(path)
+
+def normalize_local_path(path):
+    """Normalize a relative path written with either separator style."""
+    if not is_local_path(path):
+        raise ValueError(f"Expected a relative path, received: {path}")
+    return os.path.normpath(path.replace("\\", os.sep).replace("/", os.sep))
+
+def expand_session_path(path, session_id):
+    """Expand a session-relative path template and normalize its separators."""
+    return normalize_local_path(path.format(session_id=session_id))
     
 def dict2string(to_convert):
     """

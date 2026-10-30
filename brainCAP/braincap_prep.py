@@ -45,8 +45,8 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
-        return path
+    if utils.is_local_path(path):
+        return utils.normalize_local_path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
@@ -59,7 +59,7 @@ parser.add_argument("--bold_path", type=local_path, help="Path to datafile insid
 parser.add_argument("--analysis_folder", help="Output directory path")
 parser.add_argument("--permutations", type=int, default=1, help="Number of permutations to run, default 1")
 parser.add_argument("--motion_type", type=str, help="(dvarsm,dvarsme,fd)")
-parser.add_argument("--motion_path", type=str, help="Path to motion file inside session directory")
+parser.add_argument("--motion_path", type=local_path, help="Path to motion file inside session directory")
 parser.add_argument("--seed_args", type=str, default=None, help="dict consisting of seed arguments")
 parser.add_argument("--sessions_list", required=True,
                     help="Path to list of sessions", type=file_path)
@@ -165,7 +165,7 @@ for split_i in range(args.permutations):
     split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
     filein.outpath = split_dir
-    filein.datadir = os.path.join(split_dir, "data/")
+    filein.datadir = os.path.join(split_dir, "data")
     
     for path in [filein.outpath, filein.datadir]:
 

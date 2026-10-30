@@ -39,8 +39,8 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
-        return path
+    if utils.is_local_path(path):
+        return utils.normalize_local_path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
@@ -48,7 +48,7 @@ def local_path(path):
 parser = argparse.ArgumentParser()
 parser.add_argument("--sessions_folder", type=dir_path, help="Home directory path")
 parser.add_argument("--analysis_folder", type=dir_path, help="Output directory path")
-parser.add_argument("--permutation", help="Which specific permutation(s) to run. If multiple, must be a pipe '|' seperated list.")
+parser.add_argument("--permutation", required=True, help="Which specific permutation(s) to run. If multiple, must be a pipe '|' seperated list.")
 #In wrapper script, derived from k range
 parser.add_argument("--cluster_args", type=str, required=True, help="Args for sklearn clustering in form 'key1=val1,key2=val2'. " \
                     "Must have key '_method', corresponding to a function in sklearn.clustering, and key '_variable', corresponding to the clustering variable")
@@ -114,7 +114,7 @@ filein.sublistfull, filein.groupsall = parse_sfile(args.sessions_list)
 
 
 if '|' in args.permutation:
-    permutations = args.permutation.permutation('|')
+    permutations = args.permutation.split('|')
 else:
     permutations = [args.permutation]
 
@@ -124,7 +124,7 @@ for split in permutations:
     split_dir = os.path.join(args.analysis_folder, f"perm{split}")
         
     filein.outpath = split_dir
-    filein.datadir = os.path.join(split_dir, "data/")
+    filein.datadir = os.path.join(split_dir, "data")
     param.overwrite = args.overwrite
 
     # -------------------------------------------

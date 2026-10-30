@@ -24,8 +24,8 @@ def file_path(path):
         raise argparse.ArgumentTypeError(f"file {path} does not exist!")
 
 def local_path(path):
-    if path[0] != '/':
-        return path
+    if utils.is_local_path(path):
+        return utils.normalize_local_path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} must be a local path from the specified sessions_folder!")
 
@@ -92,13 +92,28 @@ for session, group in zip(slist, groups):
     logging.info(f"    Processing {session}")
     logging.info(session)
     logging.info(bold_list)
-    bolds = [os.path.join(args.sessions_folder, session, bold) for bold in bold_list]
+    session_bold_list = [
+        utils.expand_session_path(bold, session) for bold in bold_list
+    ]
+    bolds = [
+        os.path.join(args.sessions_folder, session, bold)
+        for bold in session_bold_list
+    ]
     bolds_string = '\t\t\n'.join(bolds)
     logging.info(f"        Searching for files:")
     logging.info(bolds_string)
     logging.info(f"        Running bold concatenation...")
-    conc_path = os.path.join(args.sessions_folder, session, args.bold_out)
-    info_path = os.path.join(args.sessions_folder, session, f"{os.path.splitext(args.bold_out)[0]}_info.csv")
+    conc_path = os.path.join(
+        args.sessions_folder,
+        session,
+        utils.normalize_local_path(args.bold_out),
+    )
+    normalized_bold_out = utils.normalize_local_path(args.bold_out)
+    info_path = os.path.join(
+        args.sessions_folder,
+        session,
+        f"{os.path.splitext(normalized_bold_out)[0]}_info.csv",
+    )
     if os.path.exists(conc_path):
         logging.info(f"           Warning: Existing concatenated bold file found")
         if args.overwrite.lower() == 'yes':
@@ -133,8 +148,18 @@ for session, group in zip(slist, groups):
 
     if conc_motion:
         logging.info(f"        Running motion concatenation...")
-        motions = [os.path.join(args.sessions_folder, session, motion) for motion in motion_list]
-        conc_path = os.path.join(args.sessions_folder, session, args.motion_out)
+        session_motion_list = [
+            utils.expand_session_path(motion, session) for motion in motion_list
+        ]
+        motions = [
+            os.path.join(args.sessions_folder, session, motion)
+            for motion in session_motion_list
+        ]
+        conc_path = os.path.join(
+            args.sessions_folder,
+            session,
+            utils.normalize_local_path(args.motion_out),
+        )
         if os.path.exists(conc_path):
             logging.info(f"           Warning: Existing concatenated motion file found")
             if args.overwrite.lower() == 'yes':
